@@ -66,10 +66,11 @@ refactor.
   disappear. A malformed file stops the query with `path:line: reason` and exit code 2; it is never
   skipped, defaulted or repaired. `internal/vault/testdata/corrupt/` asserts this file by file.
 - **How a binary was installed is recorded, never inferred.** `install.sh` writes
-  `.brain-axi-install` beside the binary holding `checkout` or `release`, and a binary with no
-  record at all is a `go install`. An unknown or unreadable record is refused. Guessing means
-  either replacing a binary the user did not install that way, or printing a command that cannot
-  work, and neither is recoverable from the user's side. `resolveVersion` in
+  `.brain-axi-install` beside the binary holding `checkout` or `release`. The backward-compatible
+  missing-record rules are owned by FR-13 in [docs/requirements.md](docs/requirements.md). An
+  unknown or unreadable record is refused. Guessing means either replacing a binary the user did
+  not install that way, or printing a command that cannot work, and neither is recoverable from the
+  user's side. `resolveVersion` in
   `cmd/brain-axi/main.go` is the matching rule for versions: report `dev` only when nothing real is
   available, never as a stand-in for build information the binary is holding.
 

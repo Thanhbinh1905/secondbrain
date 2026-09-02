@@ -16,7 +16,7 @@
   │  brain-axi       one static Go binary                        │
   │                  owns: parse · validate · query · render     │
   │                  never: a model call, a socket, hidden state │
-  │                  delegates: git · gh · glab, only when asked │
+  │                  delegates: git · curl/wget · gh/glab        │
   └────────────────────────────┬─────────────────────────────────┘
                                │  plain file I/O
   ┌────────────────────────────▼─────────────────────────────────┐
@@ -59,7 +59,7 @@ Each layer is replaceable: a different agent, a different CLI, even a human with
 It exists because three packages need the same two Unicode-aware primitives - diacritic folding for search and ids, display width for alignment - and a shared copy is better than three that can drift.
 
 Tracked tooling and private data live in one repo, with the vault kept separate from the tool.
-`brain-axi update` fast-forwards the tracked half; `vault/` is invisible to it and can never be touched by an upgrade.
+A checkout `brain-axi update` fast-forwards the tracked half; `vault/` is invisible to every upgrade path and can never be touched by one.
 
 ## Vault format
 
@@ -885,7 +885,7 @@ With no method record, a binary that `.brain-axi-source` names a checkout for, o
 - **go install** - print the `go install` command that upgrades this installation and exit zero, because nothing is wrong.
   The Go toolchain placed that binary and is what replaces it; a tool that shelled out to replace itself behind the user's back would be doing something the user can do plainly.
 
-Every path runs `--version` on the replacement and keeps the old binary if that fails, and every path assembles the replacement beside the target so the rename that installs it stays on one device and stays atomic.
+Every path that replaces the binary runs `--version` on the replacement and keeps the old binary if that fails, and assembles the replacement beside the target so the rename that installs it stays on one device and stays atomic.
 
 `releaseAssets` maps a Go platform to its asset name, and the names are shaped exactly like `uname -s` and `uname -m` output so `install.sh` computes one by interpolation and carries no platform table it has to keep in sync.
 That map and `.github/workflows/release.yml` are the only two places the shape lives, and `TestReleaseAssetsMatchWorkflow` fails the build if they disagree.
