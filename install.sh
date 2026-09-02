@@ -99,7 +99,10 @@ BIN_PATH="$INSTALL_DIR/brain-axi"
 LINK_PATH="$LINK_DIR/brain-axi"
 
 mkdir -p "$INSTALL_DIR"
-TMPDIR_INSTALL="$(mktemp -d)"
+if ! TMPDIR_INSTALL="$(mktemp -d "$INSTALL_DIR/.brain-axi-install.XXXXXX")"; then
+  echo "Could not create a staging directory in $INSTALL_DIR." >&2
+  exit 1
+fi
 trap 'rm -rf "$TMPDIR_INSTALL"' EXIT
 STAGED="$TMPDIR_INSTALL/brain-axi"
 
@@ -214,20 +217,44 @@ case "$REPORTED" in
 esac
 VERSION="${REPORTED#brain-axi }"
 
-mv "$STAGED" "$BIN_PATH"
-chmod 755 "$BIN_PATH"
-
 # Record how this installed, so `brain-axi update` never has to guess: guessing
 # means either replacing a binary the user did not install that way, or telling
 # them to run a command that cannot work.
-printf '%s\n' "$MODE" > "$INSTALL_DIR/.brain-axi-install"
+METHOD_STAGED="$TMPDIR_INSTALL/.brain-axi-install"
+if ! printf '%s\n' "$MODE" > "$METHOD_STAGED"; then
+  echo "Could not write the install method record in $INSTALL_DIR; nothing was installed." >&2
+  exit 1
+fi
 if [ "$MODE" = checkout ]; then
   # Record the checkout so `brain-axi update` knows what to fast-forward.
-  printf '%s\n' "$SOURCE_DIR" > "$INSTALL_DIR/.brain-axi-source"
+  SOURCE_STAGED="$TMPDIR_INSTALL/.brain-axi-source"
+  if ! printf '%s\n' "$SOURCE_DIR" > "$SOURCE_STAGED"; then
+    echo "Could not write the source checkout record in $INSTALL_DIR; nothing was installed." >&2
+    exit 1
+  fi
+  if ! mv "$SOURCE_STAGED" "$INSTALL_DIR/.brain-axi-source"; then
+    echo "Could not publish the source checkout record in $INSTALL_DIR; nothing was installed." >&2
+    exit 1
+  fi
+  if ! mv "$METHOD_STAGED" "$INSTALL_DIR/.brain-axi-install"; then
+    echo "Could not publish the install method record in $INSTALL_DIR; nothing was installed." >&2
+    exit 1
+  fi
 else
+  if ! mv "$METHOD_STAGED" "$INSTALL_DIR/.brain-axi-install"; then
+    echo "Could not publish the install method record in $INSTALL_DIR; nothing was installed." >&2
+    exit 1
+  fi
   # A previous checkout install may have left one behind, and it names a
   # checkout this binary did not come from.
-  rm -f "$INSTALL_DIR/.brain-axi-source"
+  if ! rm -f "$INSTALL_DIR/.brain-axi-source"; then
+    echo "Could not clear the stale source checkout record in $INSTALL_DIR; nothing was installed." >&2
+    exit 1
+  fi
+fi
+if ! mv "$STAGED" "$BIN_PATH"; then
+  echo "Could not replace $BIN_PATH." >&2
+  exit 1
 fi
 
 resolve_path() {

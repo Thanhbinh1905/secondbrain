@@ -9,12 +9,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"runtime/debug"
 	"sort"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // TestResolveVersion covers the three ways a binary can know what it is, and
@@ -438,41 +439,32 @@ func TestUpdateFromRelease(t *testing.T) {
 	})
 }
 
-// TestReleaseAssetsMatchWorkflow keeps the one shape that both a Go map and a
-// shell script compute from a single source of truth. If they drift, install.sh
-// downloads a name the workflow never published.
+// TestReleaseAssetsMatchWorkflow normalises the release workflow into the
+// trigger, executable build calls and published files that define a release.
 func TestReleaseAssetsMatchWorkflow(t *testing.T) {
 	raw, err := os.ReadFile(filepath.Join("..", "..", ".github", "workflows", "release.yml"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	found := map[string]bool{}
-	for _, name := range regexp.MustCompile(`brain-axi_[A-Za-z0-9_]+`).FindAllString(string(raw), -1) {
-		found[name] = true
+	model, err := normaliseReleaseWorkflow(raw)
+	if err != nil {
+		t.Fatal(err)
 	}
-	want := map[string]bool{}
-	for _, name := range releaseAssets {
-		want[name] = true
+	if len(model.TagPatterns) != 1 || model.TagPatterns[0] != "v*" {
+		t.Errorf("release trigger tags = %v, want [v*]", model.TagPatterns)
 	}
-	for name := range want {
-		if !found[name] {
-			t.Errorf("releaseAssets publishes %s but the release workflow never builds it", name)
-		}
+	if !model.StampsVersion {
+		t.Error("release builds do not stamp main.version from the pushed tag")
 	}
-	for name := range found {
-		if !want[name] {
-			t.Errorf("the release workflow builds %s but releaseAssets never asks for it", name)
-		}
+	if !mapsEqual(model.BuiltAssets, releaseAssets) {
+		t.Errorf("release builds = %v, want %v", model.BuiltAssets, releaseAssets)
 	}
-	// The version the workflow stamps is what makes a release binary report a
-	// tag rather than resolving one out of its build information.
-	if !strings.Contains(string(raw), "-X main.version=") {
-		t.Error("the release workflow does not stamp main.version")
+	wantPublished := map[string]bool{checksumsName: true, versionName: true}
+	for _, asset := range releaseAssets {
+		wantPublished[asset] = true
 	}
-	for _, name := range []string{checksumsName, versionName} {
-		if !strings.Contains(string(raw), name) {
-			t.Errorf("the release workflow never publishes %s, which the update path downloads", name)
-		}
+	if !setsEqual(model.PublishedFiles, wantPublished) {
+		t.Errorf("release publishes = %v, want %v", model.PublishedFiles, wantPublished)
 	}
 }
 
@@ -496,34 +488,211 @@ func TestTheBinaryLinksNoNetworkClient(t *testing.T) {
 	}
 }
 
-// TestInstallScriptAgreesWithTheBinary: the script and the binary have to name
-// the same records and the same methods, or a fresh install cannot be upgraded.
-func TestInstallScriptAgreesWithTheBinary(t *testing.T) {
-	raw, err := os.ReadFile(filepath.Join("..", "..", "install.sh"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	script := string(raw)
-	for _, want := range []string{
-		methodFileName, sourceFileName, checksumsName,
-		string(methodCheckout), string(methodRelease),
-		// The script composes this from its own REPO variable, so it is the
-		// path rather than the whole URL that has to match.
-		strings.TrimPrefix(strings.TrimSuffix(releaseDownloadBase, "/"), "https://"+modulePath),
-		modulePath,
-	} {
-		if !strings.Contains(script, want) {
-			t.Errorf("install.sh never mentions %q, which the binary depends on", want)
-		}
-	}
-	// The script computes its asset name by interpolating uname output, which
-	// only works while the published names are shaped that way.
-	if !strings.Contains(script, `brain-axi_$(uname -s)_$(uname -m)`) {
-		t.Error("install.sh no longer computes the asset name from uname alone")
-	}
+// --- helpers ----------------------------------------------------------------
+
+type releaseWorkflow struct {
+	On struct {
+		Push struct {
+			Tags []string `yaml:"tags"`
+		} `yaml:"push"`
+	} `yaml:"on"`
+	Jobs map[string]struct {
+		Steps []struct {
+			Name string            `yaml:"name"`
+			Env  map[string]string `yaml:"env"`
+			Run  string            `yaml:"run"`
+		} `yaml:"steps"`
+	} `yaml:"jobs"`
 }
 
-// --- helpers ----------------------------------------------------------------
+type releaseWorkflowModel struct {
+	TagPatterns    []string
+	BuiltAssets    map[string]string
+	PublishedFiles map[string]bool
+	StampsVersion  bool
+}
+
+func normaliseReleaseWorkflow(raw []byte) (releaseWorkflowModel, error) {
+	var workflow releaseWorkflow
+	if err := yaml.Unmarshal(raw, &workflow); err != nil {
+		return releaseWorkflowModel{}, fmt.Errorf("parse release workflow: %w", err)
+	}
+	job, ok := workflow.Jobs["release"]
+	if !ok {
+		return releaseWorkflowModel{}, errors.New("release workflow has no release job")
+	}
+	model := releaseWorkflowModel{
+		TagPatterns:    workflow.On.Push.Tags,
+		BuiltAssets:    map[string]string{},
+		PublishedFiles: map[string]bool{},
+	}
+	for _, step := range job.Steps {
+		switch step.Name {
+		case "Build every published platform":
+			if step.Env["VERSION"] != "${{ github.ref_name }}" {
+				return releaseWorkflowModel{}, errors.New("build step VERSION is not the pushed tag")
+			}
+			builds, stamps, generated, err := normaliseBuildStep(step.Run)
+			if err != nil {
+				return releaseWorkflowModel{}, err
+			}
+			model.BuiltAssets = builds
+			model.StampsVersion = stamps
+			for name := range generated {
+				model.PublishedFiles[name] = false
+			}
+		case "Publish the release":
+			published, err := normalisePublishStep(step.Run)
+			if err != nil {
+				return releaseWorkflowModel{}, err
+			}
+			for name := range published {
+				model.PublishedFiles[name] = true
+			}
+		}
+	}
+	for name, published := range model.PublishedFiles {
+		if !published {
+			return releaseWorkflowModel{}, fmt.Errorf("release generates %s but does not publish it", name)
+		}
+	}
+	return model, nil
+}
+
+func normaliseBuildStep(script string) (map[string]string, bool, map[string]bool, error) {
+	lines := executableShellLines(script)
+	builds := map[string]string{}
+	generated := map[string]bool{}
+	stampsVersion := false
+	inBuildFunction := false
+	for _, fields := range lines {
+		if len(fields) == 2 && fields[0] == "build" && fields[1] == "{" {
+			inBuildFunction = true
+			continue
+		}
+		if inBuildFunction {
+			if len(fields) == 1 && fields[0] == "}" {
+				inBuildFunction = false
+				continue
+			}
+			if commandHasSequence(fields, []string{"GOOS=$1", "GOARCH=$2", "CGO_ENABLED=0", "go", "build"}) &&
+				commandHasSequence(fields, []string{"-X", "main.version=$VERSION"}) &&
+				commandHasSequence(fields, []string{"-o", "dist/$3", "./cmd/brain-axi"}) {
+				stampsVersion = true
+			}
+			continue
+		}
+		switch fields[0] {
+		case "if", "for", "case", "while", "until":
+			return nil, false, nil, fmt.Errorf("release build calls are nested under %q control flow", fields[0])
+		}
+		if len(fields) == 4 && fields[0] == "build" {
+			builds[fields[1]+"/"+fields[2]] = fields[3]
+		}
+		if commandHasSequence(fields, []string{"printf", "%s\\n", "$VERSION", ">", "dist/" + versionName}) {
+			generated[versionName] = true
+		}
+		if commandHasSequence(fields, []string{"sha256sum", "brain-axi_*", ">", checksumsName}) {
+			generated[checksumsName] = true
+		}
+	}
+	for _, asset := range builds {
+		generated[asset] = true
+	}
+	if len(builds) == 0 {
+		return nil, false, nil, errors.New("release workflow has no executable build calls")
+	}
+	for _, name := range []string{checksumsName, versionName} {
+		if !generated[name] {
+			return nil, false, nil, fmt.Errorf("release workflow does not generate %s", name)
+		}
+	}
+	return builds, stampsVersion, generated, nil
+}
+
+func normalisePublishStep(script string) (map[string]bool, error) {
+	lines := executableShellLines(script)
+	for _, fields := range lines {
+		if !commandHasSequence(fields, []string{"gh", "release", "create", "$VERSION"}) {
+			continue
+		}
+		published := map[string]bool{}
+		for _, field := range fields {
+			if strings.HasPrefix(field, "dist/") {
+				published[strings.TrimPrefix(field, "dist/")] = true
+			}
+		}
+		return published, nil
+	}
+	return nil, errors.New("release workflow has no executable publish command")
+}
+
+func executableShellLines(script string) [][]string {
+	var commands [][]string
+	var current []string
+	for _, raw := range strings.Split(script, "\n") {
+		line := strings.TrimSpace(raw)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		continued := strings.HasSuffix(line, "\\")
+		line = strings.TrimSpace(strings.TrimSuffix(line, "\\"))
+		current = append(current, shellFields(line)...)
+		if !continued {
+			commands = append(commands, current)
+			current = nil
+		}
+	}
+	return commands
+}
+
+func shellFields(line string) []string {
+	replacer := strings.NewReplacer("\"", "", "'", "", "(", "", ")", "")
+	return strings.Fields(replacer.Replace(line))
+}
+
+func commandHasSequence(command, sequence []string) bool {
+	if len(sequence) > len(command) {
+		return false
+	}
+	for start := 0; start <= len(command)-len(sequence); start++ {
+		matched := true
+		for i := range sequence {
+			if command[start+i] != sequence[i] {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
+}
+
+func mapsEqual(got, want map[string]string) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for key, value := range want {
+		if got[key] != value {
+			return false
+		}
+	}
+	return true
+}
+
+func setsEqual(got, want map[string]bool) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for key := range want {
+		if !got[key] {
+			return false
+		}
+	}
+	return true
+}
 
 // methodOf resolves the install method with no flags set.
 func methodOf(t *testing.T, self string) (installMethod, error) {

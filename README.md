@@ -21,8 +21,10 @@ It is a couple of hundred lines of POSIX shell, and
 [reading it first](https://raw.githubusercontent.com/Thanhbinh1905/secondbrain/main/install.sh) is a
 reasonable thing to do with anything you pipe into a shell.
 
-Every path installs to `~/.brain-axi/bin` and links the binary into the first of `~/.local/bin` or
-`/usr/local/bin`. `$BRAIN_AXI_INSTALL_DIR` and `$BRAIN_AXI_LINK_DIR` override both.
+Both `install.sh` modes install to `~/.brain-axi/bin` and link the binary into the first of
+`~/.local/bin` or `/usr/local/bin`.
+`$BRAIN_AXI_INSTALL_DIR` and `$BRAIN_AXI_LINK_DIR` override those locations.
+`go install` writes to `$GOBIN`, or to `$GOPATH/bin` when `$GOBIN` is unset, and creates no link.
 
 #### With Go
 

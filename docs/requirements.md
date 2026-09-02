@@ -148,7 +148,7 @@ Where each of these is implemented is recorded in [design.md](design.md), "Requi
 | ID | Requirement |
 | --- | --- |
 | NFR-1 | Cold start to first output under 50 ms; any query under 100 ms on 5,000 files. The agent calls this tool several times per turn, so latency compounds. |
-| NFR-2 | Single statically linked binary. No runtime and no shared library. **The binary makes no network call of its own; network reach is delegated to explicitly invoked forge CLIs.** |
+| NFR-2 | Single statically linked binary. No runtime and no shared library. **The binary makes no network call of its own; network reach is delegated to explicitly invoked CLIs.** |
 | NFR-3 | Every write is atomic: write to a temporary file in the same directory, then rename. An interrupted write never leaves a partial file. |
 | NFR-4 | Malformed input fails loudly with `path:line: reason` and a non-zero exit. No default values, no skipped files, no swallowed errors. |
 | NFR-5 | The vault remains fully usable through a text editor and Obsidian with the tool uninstalled. |
@@ -164,9 +164,9 @@ What is still literally true, and is the whole of the amendment:
 
 - **brain-axi itself opens no socket and holds no token, ever.** It links no network client. There
   is no host list, no credential file, and nothing to configure.
-- **Network reach is delegated by executing the operator's already-authenticated CLIs.** `gh` for
-  GitHub, `glab` for GitLab including self-hosted hosts. Each already knows its own hosts and
-  credentials, and brain-axi never tries to manage that.
+- **Network reach is delegated by executing explicit CLIs.** `gh` handles GitHub, `glab` handles
+  GitLab including self-hosted hosts, `git` fast-forwards a checkout, and `curl` or `wget` downloads
+  a release. Those programs own their hosts, credentials and transport; brain-axi never does.
 - **Only an explicitly requested command delegates.** `pr --refresh`, `link --refresh`,
   `recap --verify-forge` and `doctor` reach a forge. `today`, `week`, `agenda`, `due`, `ideas`,
   `search`, `related`, `board`, `recap`, `brief` and the bare dashboard never do, and are asserted
