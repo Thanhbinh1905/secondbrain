@@ -118,10 +118,6 @@ remove_method_record() {
 
 metadata_failure() {
   echo "$1" >&2
-  if ! remove_method_record; then
-    exit 1
-  fi
-  METHOD_PUBLISHED=0
   exit 1
 }
 

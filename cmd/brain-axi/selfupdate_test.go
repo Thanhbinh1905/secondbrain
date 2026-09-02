@@ -462,6 +462,98 @@ func TestReleaseAssetsMatchWorkflow(t *testing.T) {
 	}
 }
 
+func TestInstallerFailureBeforeMetadataPublicationPreservesExistingMethod(t *testing.T) {
+	asset, ok := releaseAssets[runtime.GOOS+"/"+runtime.GOARCH]
+	if !ok {
+		t.Skip("the release installer does not publish this test platform")
+	}
+
+	root := t.TempDir()
+	installDir := filepath.Join(root, "install")
+	binDir := filepath.Join(root, "bin")
+	if err := os.MkdirAll(installDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	oldBinary := []byte("existing release binary")
+	method := []byte(string(methodRelease) + "\n")
+	if err := os.WriteFile(filepath.Join(installDir, "brain-axi"), oldBinary, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(installDir, methodFileName), method, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	replacement := "#!/bin/sh\nprintf 'brain-axi v9.9.9\\n'\n"
+	assetPath := filepath.Join(root, asset)
+	manifestPath := filepath.Join(root, checksumsName)
+	if err := os.WriteFile(assetPath, []byte(replacement), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(manifestPath, []byte(manifestFor(map[string]string{asset: replacement})), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	curl := `#!/bin/sh
+output=
+url=
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --output) output="$2"; shift 2 ;;
+    *) url="$1"; shift ;;
+  esac
+done
+case "$url" in
+  */checksums.txt) cp "$TEST_MANIFEST" "$output" ;;
+  *) cp "$TEST_ASSET" "$output" ;;
+esac
+`
+	failingMove := `#!/bin/sh
+case "$1" in
+  */.brain-axi-install) exit 73 ;;
+esac
+exec /usr/bin/mv "$@"
+`
+	if err := os.WriteFile(filepath.Join(binDir, "curl"), []byte(curl), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(binDir, "mv"), []byte(failingMove), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command("sh", filepath.Join("..", "..", "install.sh"), "--release")
+	cmd.Env = []string{
+		"HOME=" + root,
+		"PATH=" + binDir + ":/usr/local/go/bin:/usr/bin:/bin",
+		"BRAIN_AXI_INSTALL_DIR=" + installDir,
+		"BRAIN_AXI_LINK_DIR=" + installDir,
+		"TEST_ASSET=" + assetPath,
+		"TEST_MANIFEST=" + manifestPath,
+	}
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatalf("installer unexpectedly succeeded:\n%s", out)
+	}
+
+	gotMethod, readErr := os.ReadFile(filepath.Join(installDir, methodFileName))
+	if readErr != nil {
+		t.Fatalf("existing method record was removed: %v\n%s", readErr, out)
+	}
+	if string(gotMethod) != string(method) {
+		t.Errorf("method record = %q, want %q", gotMethod, method)
+	}
+	gotBinary, readErr := os.ReadFile(filepath.Join(installDir, "brain-axi"))
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if string(gotBinary) != string(oldBinary) {
+		t.Errorf("existing binary changed to %q", gotBinary)
+	}
+}
+
 // TestTheBinaryLinksNoNetworkClient is NFR-2 as a build failure rather than a
 // promise. The release path added a download, and the way it must stay added is
 // by delegating to a CLI: the moment anything here imports an HTTP or socket
