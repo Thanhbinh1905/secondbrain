@@ -968,7 +968,7 @@ Every FR and NFR, and where it lives.
 | NFR-3 | `internal/vault/store.go` `WriteFile` |
 | NFR-4 | `internal/frontmatter` error positions; `internal/vault/record.go` validation; exit code 2 |
 | NFR-5 | Plain Markdown with YAML frontmatter, unknown keys preserved, no tool-only files inside record directories |
-| NFR-6 | No cache, no index, no lock. The one file outside the vault is `~/.brain-axi/bin/.brain-axi-source`, written by `install.sh` and read only by `brain-axi update`: it records where the checkout is, and no command that touches the vault reads it |
+| NFR-6 | No cache, no index, no lock. The files outside the vault are installation metadata: `.brain-axi-source` records a checkout path and `.brain-axi-install` records the install method beside the binary. Only lifecycle installation and `brain-axi update` use them; no command that reads or writes the vault consults either file. |
 | NFR-7 | `internal/unitext` width and folding; the Unicode alignment golden tests |
 
 Nothing in the specification is unimplemented.

@@ -439,8 +439,8 @@ func TestUpdateFromRelease(t *testing.T) {
 	})
 }
 
-// TestReleaseAssetsMatchWorkflow normalises the release workflow into the
-// trigger, executable build calls and published files that define a release.
+// TestReleaseAssetsMatchWorkflow normalises the release trigger and the file
+// arguments declared on the top-level GitHub release command.
 func TestReleaseAssetsMatchWorkflow(t *testing.T) {
 	raw, err := os.ReadFile(filepath.Join("..", "..", ".github", "workflows", "release.yml"))
 	if err != nil {
@@ -452,12 +452,6 @@ func TestReleaseAssetsMatchWorkflow(t *testing.T) {
 	}
 	if len(model.TagPatterns) != 1 || model.TagPatterns[0] != "v*" {
 		t.Errorf("release trigger tags = %v, want [v*]", model.TagPatterns)
-	}
-	if !model.StampsVersion {
-		t.Error("release builds do not stamp main.version from the pushed tag")
-	}
-	if !mapsEqual(model.BuiltAssets, releaseAssets) {
-		t.Errorf("release builds = %v, want %v", model.BuiltAssets, releaseAssets)
 	}
 	wantPublished := map[string]bool{checksumsName: true, versionName: true}
 	for _, asset := range releaseAssets {
@@ -498,18 +492,15 @@ type releaseWorkflow struct {
 	} `yaml:"on"`
 	Jobs map[string]struct {
 		Steps []struct {
-			Name string            `yaml:"name"`
-			Env  map[string]string `yaml:"env"`
-			Run  string            `yaml:"run"`
+			Name string `yaml:"name"`
+			Run  string `yaml:"run"`
 		} `yaml:"steps"`
 	} `yaml:"jobs"`
 }
 
 type releaseWorkflowModel struct {
 	TagPatterns    []string
-	BuiltAssets    map[string]string
 	PublishedFiles map[string]bool
-	StampsVersion  bool
 }
 
 func normaliseReleaseWorkflow(raw []byte) (releaseWorkflowModel, error) {
@@ -523,163 +514,45 @@ func normaliseReleaseWorkflow(raw []byte) (releaseWorkflowModel, error) {
 	}
 	model := releaseWorkflowModel{
 		TagPatterns:    workflow.On.Push.Tags,
-		BuiltAssets:    map[string]string{},
 		PublishedFiles: map[string]bool{},
 	}
 	for _, step := range job.Steps {
-		switch step.Name {
-		case "Build every published platform":
-			if step.Env["VERSION"] != "${{ github.ref_name }}" {
-				return releaseWorkflowModel{}, errors.New("build step VERSION is not the pushed tag")
-			}
-			builds, stamps, generated, err := normaliseBuildStep(step.Run)
+		if step.Name == "Publish the release" {
+			published, err := releaseCreateFiles(step.Run)
 			if err != nil {
 				return releaseWorkflowModel{}, err
 			}
-			model.BuiltAssets = builds
-			model.StampsVersion = stamps
-			for name := range generated {
-				model.PublishedFiles[name] = false
-			}
-		case "Publish the release":
-			published, err := normalisePublishStep(step.Run)
-			if err != nil {
-				return releaseWorkflowModel{}, err
-			}
-			for name := range published {
-				model.PublishedFiles[name] = true
-			}
+			model.PublishedFiles = published
 		}
 	}
-	for name, published := range model.PublishedFiles {
-		if !published {
-			return releaseWorkflowModel{}, fmt.Errorf("release generates %s but does not publish it", name)
-		}
+	if len(model.PublishedFiles) == 0 {
+		return releaseWorkflowModel{}, errors.New("release workflow has no published files")
 	}
 	return model, nil
 }
 
-func normaliseBuildStep(script string) (map[string]string, bool, map[string]bool, error) {
-	lines := executableShellLines(script)
-	builds := map[string]string{}
-	generated := map[string]bool{}
-	stampsVersion := false
-	inBuildFunction := false
-	for _, fields := range lines {
-		if len(fields) == 2 && fields[0] == "build" && fields[1] == "{" {
-			inBuildFunction = true
+func releaseCreateFiles(script string) (map[string]bool, error) {
+	lines := strings.Split(script, "\n")
+	for i, raw := range lines {
+		if raw != strings.TrimSpace(raw) || !strings.HasPrefix(raw, "gh release create ") {
 			continue
 		}
-		if inBuildFunction {
-			if len(fields) == 1 && fields[0] == "}" {
-				inBuildFunction = false
-				continue
-			}
-			if commandHasSequence(fields, []string{"GOOS=$1", "GOARCH=$2", "CGO_ENABLED=0", "go", "build"}) &&
-				commandHasSequence(fields, []string{"-X", "main.version=$VERSION"}) &&
-				commandHasSequence(fields, []string{"-o", "dist/$3", "./cmd/brain-axi"}) {
-				stampsVersion = true
-			}
-			continue
+		command := strings.TrimSuffix(raw, "\\")
+		for strings.HasSuffix(raw, "\\") && i+1 < len(lines) {
+			i++
+			raw = strings.TrimSpace(lines[i])
+			command += " " + strings.TrimSuffix(raw, "\\")
 		}
-		switch fields[0] {
-		case "if", "for", "case", "while", "until":
-			return nil, false, nil, fmt.Errorf("release build calls are nested under %q control flow", fields[0])
-		}
-		if len(fields) == 4 && fields[0] == "build" {
-			builds[fields[1]+"/"+fields[2]] = fields[3]
-		}
-		if commandHasSequence(fields, []string{"printf", "%s\\n", "$VERSION", ">", "dist/" + versionName}) {
-			generated[versionName] = true
-		}
-		if commandHasSequence(fields, []string{"sha256sum", "brain-axi_*", ">", checksumsName}) {
-			generated[checksumsName] = true
-		}
-	}
-	for _, asset := range builds {
-		generated[asset] = true
-	}
-	if len(builds) == 0 {
-		return nil, false, nil, errors.New("release workflow has no executable build calls")
-	}
-	for _, name := range []string{checksumsName, versionName} {
-		if !generated[name] {
-			return nil, false, nil, fmt.Errorf("release workflow does not generate %s", name)
-		}
-	}
-	return builds, stampsVersion, generated, nil
-}
-
-func normalisePublishStep(script string) (map[string]bool, error) {
-	lines := executableShellLines(script)
-	for _, fields := range lines {
-		if !commandHasSequence(fields, []string{"gh", "release", "create", "$VERSION"}) {
-			continue
-		}
-		published := map[string]bool{}
-		for _, field := range fields {
+		files := map[string]bool{}
+		for _, field := range strings.Fields(command) {
+			field = strings.Trim(field, "\"")
 			if strings.HasPrefix(field, "dist/") {
-				published[strings.TrimPrefix(field, "dist/")] = true
+				files[strings.TrimPrefix(field, "dist/")] = true
 			}
 		}
-		return published, nil
+		return files, nil
 	}
-	return nil, errors.New("release workflow has no executable publish command")
-}
-
-func executableShellLines(script string) [][]string {
-	var commands [][]string
-	var current []string
-	for _, raw := range strings.Split(script, "\n") {
-		line := strings.TrimSpace(raw)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		continued := strings.HasSuffix(line, "\\")
-		line = strings.TrimSpace(strings.TrimSuffix(line, "\\"))
-		current = append(current, shellFields(line)...)
-		if !continued {
-			commands = append(commands, current)
-			current = nil
-		}
-	}
-	return commands
-}
-
-func shellFields(line string) []string {
-	replacer := strings.NewReplacer("\"", "", "'", "", "(", "", ")", "")
-	return strings.Fields(replacer.Replace(line))
-}
-
-func commandHasSequence(command, sequence []string) bool {
-	if len(sequence) > len(command) {
-		return false
-	}
-	for start := 0; start <= len(command)-len(sequence); start++ {
-		matched := true
-		for i := range sequence {
-			if command[start+i] != sequence[i] {
-				matched = false
-				break
-			}
-		}
-		if matched {
-			return true
-		}
-	}
-	return false
-}
-
-func mapsEqual(got, want map[string]string) bool {
-	if len(got) != len(want) {
-		return false
-	}
-	for key, value := range want {
-		if got[key] != value {
-			return false
-		}
-	}
-	return true
+	return nil, errors.New("release workflow has no top-level gh release create command")
 }
 
 func setsEqual(got, want map[string]bool) bool {

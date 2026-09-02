@@ -47,15 +47,17 @@ an upgrade knows what to fast-forward. It needs Go 1.26 or newer. `./install.sh 
 #### What each path reports, and how each one upgrades
 
 The three differ, and the binary knows which one it is: `install.sh` records the method beside the
-binary, and a binary with no record at all came from `go install`. A record naming something else is
-refused rather than guessed at, because guessing means either replacing a binary you did not install
-that way or printing a command that cannot work.
+binary.
+A legacy source record or a binary inside a checkout remains a checkout install; another binary with
+no method record is treated as `go install`.
+A record naming something else is refused rather than guessed at, because guessing means either
+replacing a binary you did not install that way or printing a command that cannot work.
 
 | Installed by | `brain-axi --version` | `brain-axi update` |
 | --- | --- | --- |
 | the piped script | the release tag, `v1.2.3` | downloads the newest release, verifies its checksum, replaces |
 | `go install` | the module version the toolchain recorded: a tag, or a pseudo-version naming the commit | prints the `go install` command that upgrades it, and exits zero - nothing is wrong |
-| a checkout | the checkout's short commit, `-dirty` when it had uncommitted changes | fast-forwards the checkout, rebuilds, replaces |
+| a checkout | the checkout's short commit, with `-dirty` when tracked files had unstaged changes | fast-forwards the checkout, rebuilds, replaces |
 
 `--check` reports on any of them without upgrading. Every path that replaces the binary runs
 `--version` on the replacement first and keeps the old one if that fails.

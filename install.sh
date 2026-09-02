@@ -103,8 +103,45 @@ if ! TMPDIR_INSTALL="$(mktemp -d "$INSTALL_DIR/.brain-axi-install.XXXXXX")"; the
   echo "Could not create a staging directory in $INSTALL_DIR." >&2
   exit 1
 fi
-trap 'rm -rf "$TMPDIR_INSTALL"' EXIT
 STAGED="$TMPDIR_INSTALL/brain-axi"
+METHOD_PATH="$INSTALL_DIR/.brain-axi-install"
+METHOD_PUBLISHED=0
+BINARY_PUBLISHED=0
+
+remove_method_record() {
+  if ! rm -f "$METHOD_PATH"; then
+    echo "Could not remove $METHOD_PATH after installation failed; it may name the wrong install method." >&2
+    return 1
+  fi
+  echo "Removed $METHOD_PATH after installation failed; the install method is unrecorded. Re-run the installer." >&2
+}
+
+metadata_failure() {
+  echo "$1" >&2
+  if ! remove_method_record; then
+    exit 1
+  fi
+  METHOD_PUBLISHED=0
+  exit 1
+}
+
+cleanup() {
+  status=$?
+  if ! rm -rf "$TMPDIR_INSTALL"; then
+    echo "Could not remove the staging directory $TMPDIR_INSTALL." >&2
+    status=1
+  fi
+  if [ "$METHOD_PUBLISHED" -eq 1 ] && [ "$BINARY_PUBLISHED" -eq 0 ]; then
+    if ! remove_method_record; then
+      status=1
+    fi
+  fi
+  trap - EXIT
+  exit "$status"
+}
+
+trap cleanup EXIT
+trap 'exit 1' HUP INT TERM
 
 # --- download helpers -------------------------------------------------------
 
@@ -222,40 +259,37 @@ VERSION="${REPORTED#brain-axi }"
 # them to run a command that cannot work.
 METHOD_STAGED="$TMPDIR_INSTALL/.brain-axi-install"
 if ! printf '%s\n' "$MODE" > "$METHOD_STAGED"; then
-  echo "Could not write the install method record in $INSTALL_DIR; nothing was installed." >&2
-  exit 1
+  metadata_failure "Could not write the install method record in $INSTALL_DIR; nothing was installed."
 fi
 if [ "$MODE" = checkout ]; then
   # Record the checkout so `brain-axi update` knows what to fast-forward.
   SOURCE_STAGED="$TMPDIR_INSTALL/.brain-axi-source"
   if ! printf '%s\n' "$SOURCE_DIR" > "$SOURCE_STAGED"; then
-    echo "Could not write the source checkout record in $INSTALL_DIR; nothing was installed." >&2
-    exit 1
+    metadata_failure "Could not write the source checkout record in $INSTALL_DIR; nothing was installed."
   fi
+  if ! mv "$METHOD_STAGED" "$METHOD_PATH"; then
+    metadata_failure "Could not publish the install method record in $INSTALL_DIR; nothing was installed."
+  fi
+  METHOD_PUBLISHED=1
   if ! mv "$SOURCE_STAGED" "$INSTALL_DIR/.brain-axi-source"; then
-    echo "Could not publish the source checkout record in $INSTALL_DIR; nothing was installed." >&2
-    exit 1
-  fi
-  if ! mv "$METHOD_STAGED" "$INSTALL_DIR/.brain-axi-install"; then
-    echo "Could not publish the install method record in $INSTALL_DIR; nothing was installed." >&2
-    exit 1
+    metadata_failure "Could not publish the source checkout record in $INSTALL_DIR; nothing was installed."
   fi
 else
-  if ! mv "$METHOD_STAGED" "$INSTALL_DIR/.brain-axi-install"; then
-    echo "Could not publish the install method record in $INSTALL_DIR; nothing was installed." >&2
-    exit 1
+  if ! mv "$METHOD_STAGED" "$METHOD_PATH"; then
+    metadata_failure "Could not publish the install method record in $INSTALL_DIR; nothing was installed."
   fi
+  METHOD_PUBLISHED=1
   # A previous checkout install may have left one behind, and it names a
   # checkout this binary did not come from.
   if ! rm -f "$INSTALL_DIR/.brain-axi-source"; then
-    echo "Could not clear the stale source checkout record in $INSTALL_DIR; nothing was installed." >&2
-    exit 1
+    metadata_failure "Could not clear the stale source checkout record in $INSTALL_DIR; nothing was installed."
   fi
 fi
 if ! mv "$STAGED" "$BIN_PATH"; then
   echo "Could not replace $BIN_PATH." >&2
   exit 1
 fi
+BINARY_PUBLISHED=1
 
 resolve_path() {
   (cd "$1" 2>/dev/null && pwd -P)
