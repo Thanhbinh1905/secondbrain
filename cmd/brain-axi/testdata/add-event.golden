@@ -1,0 +1,9 @@
+added: event
+id: platform-team-sync-in-zurich-20260911
+path: events/2026-09-11-platform-team-sync-in-zurich.md
+title: Platform team sync in Zürich
+when: 2026-09-11T14:00:00+07:00 (Friday)
+duration: 60m
+help[2]:
+  - Run `brain-axi show platform-team-sync-in-zurich-20260911` to check it
+  - Echo the resolved absolute date and weekday back to the user

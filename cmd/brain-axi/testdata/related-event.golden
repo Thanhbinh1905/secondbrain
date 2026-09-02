@@ -1,0 +1,10 @@
+id: platform-team-sync-20260904
+type: event
+path: events/2026-09-04-platform-team-sync.md
+points_to[1]{id,type,via,resolved,title}:
+  platform-team, person, with, yes, Platform team
+pointed_to_by[1]{id,type,via,resolved,title}:
+  calendar-export, idea, links, yes, export the calendar as .ics
+help[2]:
+  - Run `brain-axi show <id>` for either end of a link
+  - Open events/2026-09-04-platform-team-sync.md to correct its links: field by hand

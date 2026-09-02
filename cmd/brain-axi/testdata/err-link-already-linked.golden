@@ -1,0 +1,1 @@
+error: migrate-staging-db is already linked to https://git.example.com/platform/service/-/merge_requests/42; pass --force to replace it

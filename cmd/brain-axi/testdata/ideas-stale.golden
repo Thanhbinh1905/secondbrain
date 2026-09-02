@@ -1,0 +1,6 @@
+ideas[1]{id,title,status,age,touched}:
+  customer-referral, customer referral program, pending, 24d, 2026-08-09
+attention[1]: customer-referral past its 14d nudge horizon
+help[2]:
+  - Run `brain-axi review` to triage the stale ones
+  - Run `brain-axi update <id> --status building` to start one

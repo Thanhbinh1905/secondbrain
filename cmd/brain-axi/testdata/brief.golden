@@ -1,0 +1,23 @@
+today: 2026-09-02 Wednesday
+today[2]{when,id,title}:
+  09:00-09:30, standup,               standup
+  15:00-16:00, referral-pitch-review, review the São Paulo referral pitch deck
+upcoming[6]{date,when,id,title}:
+  2026-09-04, 09:00-09:30, standup,                     standup
+  2026-09-04, 14:00-15:00, platform-team-sync-20260904, Platform team sync
+  2026-09-05, 10:00-10:45, one-on-one-20260905,         Design jam
+  2026-09-07, 09:00-09:30, standup,                     standup
+  2026-09-08, 09:00-09:30, standup,                     standup
+  2026-09-09, 09:00-09:30, standup,                     standup
+due_tasks[1]{due,id,title,assignee,status,flag}:
+  2026-09-05T17:00:00+07:00, review-backup-policy, review the backup policy, -, open, -
+unchecked_tasks[1]{due,id,title,assignee,status,flag}:
+  "-", migrate-staging-db, migrate the staging database, platform-team, waiting, unchecked-28d
+stale_ideas[1]{id,title,age,horizon}:
+  customer-referral, customer referral program, 24d, 14d
+attention[2]:
+  - customer-referral untouched for 24d, past its 14d horizon
+  - migrate-staging-db: delegated to platform-team and not checked for 28d, past its 14d follow-up horizon
+help[2]:
+  - Run `brain-axi review` to triage the stale ideas and unchecked tasks
+  - Run `brain-axi week` for the whole week

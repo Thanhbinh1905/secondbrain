@@ -1,0 +1,206 @@
+{
+  "recap": {
+    "schema": "brain-recap.v1",
+    "generated": "2026-09-02T12:00:00+07:00",
+    "timezone": "Asia/Bangkok",
+    "period": {
+      "kind": "week",
+      "label": "week of 2026-08-31",
+      "from": "2026-08-31",
+      "to": "2026-09-06"
+    },
+    "previous": {
+      "kind": "week",
+      "label": "week of 2026-08-24",
+      "from": "2026-08-24",
+      "to": "2026-08-30"
+    },
+    "blocks": [
+      {
+        "key": "shipped",
+        "title": "Shipped",
+        "empty": "nothing is recorded as shipped in this period",
+        "metrics": [
+          {
+            "key": "shipped",
+            "label": "ideas shipped",
+            "value": 0,
+            "known": true,
+            "note": "",
+            "delta": 0,
+            "delta_known": true
+          }
+        ],
+        "rows": []
+      },
+      {
+        "key": "commitments",
+        "title": "Commitments",
+        "empty": "no commitment was made in this period",
+        "metrics": [
+          {
+            "key": "kept",
+            "label": "commitments kept",
+            "value": 0,
+            "known": true,
+            "note": "measured from current vault state",
+            "delta": null,
+            "delta_known": false
+          },
+          {
+            "key": "made",
+            "label": "commitments made",
+            "value": 1,
+            "known": true,
+            "note": "",
+            "delta": 1,
+            "delta_known": true
+          }
+        ],
+        "rows": [
+          {
+            "id": "review-backup-policy",
+            "kind": "task",
+            "title": "review the backup policy",
+            "detail": "2026-09-01",
+            "note": "open",
+            "path": "tasks/review-backup-policy.md"
+          }
+        ]
+      },
+      {
+        "key": "pull_requests",
+        "title": "Pull requests",
+        "empty": "no pull request is recorded as merged in this period",
+        "metrics": [
+          {
+            "key": "merged",
+            "label": "merged in this period",
+            "value": 0,
+            "known": true,
+            "note": "counted from shipped_at and shipped_pr, which `brain-axi ship` writes",
+            "delta": null,
+            "delta_known": false
+          },
+          {
+            "key": "opened",
+            "label": "opened in this period",
+            "value": null,
+            "known": false,
+            "note": "the vault records no date a pull request was opened, so this is unknown rather than nought",
+            "delta": null,
+            "delta_known": false
+          },
+          {
+            "key": "pending",
+            "label": "open or draft now",
+            "value": 1,
+            "known": true,
+            "note": "the cached state of every linked record, as it stands now rather than over the period",
+            "delta": null,
+            "delta_known": false
+          },
+          {
+            "key": "closed",
+            "label": "closed now",
+            "value": 0,
+            "known": true,
+            "note": "the cached state of every linked record, as it stands now rather than over the period",
+            "delta": null,
+            "delta_known": false
+          }
+        ],
+        "rows": []
+      },
+      {
+        "key": "meetings",
+        "title": "Meetings",
+        "empty": "no meeting is recorded in this period",
+        "metrics": [
+          {
+            "key": "held",
+            "label": "meetings held",
+            "value": 1,
+            "known": true,
+            "note": "",
+            "delta": 1,
+            "delta_known": true
+          },
+          {
+            "key": "ideas_generated",
+            "label": "ideas linked to them",
+            "value": 0,
+            "known": true,
+            "note": "an idea counts here when it links to the meeting; the linking layer is the only record of that",
+            "delta": 0,
+            "delta_known": true
+          }
+        ],
+        "rows": [
+          {
+            "id": "standup",
+            "kind": "event",
+            "title": "standup",
+            "detail": "2026-09-02",
+            "note": "no idea links to it",
+            "path": "events/2026-09-02-standup.md"
+          }
+        ]
+      },
+      {
+        "key": "delegated",
+        "title": "Delegated",
+        "empty": "nothing is recorded as delegated in this period",
+        "metrics": [
+          {
+            "key": "done",
+            "label": "delegated items done",
+            "value": 0,
+            "known": true,
+            "note": "measured from current vault state",
+            "delta": null,
+            "delta_known": false
+          },
+          {
+            "key": "unchecked",
+            "label": "delegated items still unchecked",
+            "value": 1,
+            "known": true,
+            "note": "measured from current vault state",
+            "delta": null,
+            "delta_known": false
+          }
+        ],
+        "rows": [
+          {
+            "id": "migrate-staging-db",
+            "kind": "task",
+            "title": "migrate the staging database",
+            "detail": "28d",
+            "note": "platform-team, unchecked past its 14d horizon",
+            "path": "tasks/migrate-staging-db.md"
+          }
+        ]
+      },
+      {
+        "key": "dormant",
+        "title": "Dormant ideas",
+        "empty": "no idea is past the dormancy window",
+        "metrics": [
+          {
+            "key": "dormant",
+            "label": "ideas past the dormancy window",
+            "value": 0,
+            "known": true,
+            "note": "measured from current vault state",
+            "delta": null,
+            "delta_known": false
+          }
+        ],
+        "rows": []
+      }
+    ],
+    "verified": false,
+    "drift": []
+  }
+}

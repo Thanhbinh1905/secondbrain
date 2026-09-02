@@ -1,0 +1,5 @@
+updated: customer-referral
+path: ideas/customer-referral.md
+changed[1]{key,from,to}:
+  touched, 2026-08-09, 2026-09-02
+help[1]: Run `brain-axi show customer-referral` to see the record

@@ -1,0 +1,22 @@
+id: migrate-staging-db
+type: task
+path: tasks/migrate-staging-db.md
+title: migrate the staging database
+status: waiting
+assignee: platform-team
+follow_up_after: 14d
+forge_url: https://git.example.com/platform/service/-/merge_requests/42
+forge_state: open, checks pending (cached, checked 2026-08-20T10:15:00+07:00, 13d ago)
+created: 2026-08-01
+touched: 2026-08-05 (28d ago)
+fleet_tasks: PROJ-42
+body_links[1]{id,resolved,title}:
+  platform-team, yes, Platform team
+assignee[1]{id,resolved,title}:
+  platform-team, yes, Platform team
+body:
+  Assigned to [[platform-team]]. Not checked in on yet.
+attention[1]: delegated to platform-team and not checked for 28d, past its 14d follow-up horizon
+help[2]:
+  - Run `brain-axi update migrate-staging-db --status <status>` to change it
+  - Open tasks/migrate-staging-db.md to edit it by hand

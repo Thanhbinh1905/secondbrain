@@ -1,0 +1,1 @@
+error: add event needs --when as an absolute timestamp, for example --when 2026-09-04T14:00

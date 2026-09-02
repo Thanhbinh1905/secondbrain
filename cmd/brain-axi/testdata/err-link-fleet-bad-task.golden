@@ -1,0 +1,1 @@
+error: flag --task: fleet task id "rm -rf /" must be letters, digits, dot, underscore, hyphen, slash or hash, starting with a letter or digit

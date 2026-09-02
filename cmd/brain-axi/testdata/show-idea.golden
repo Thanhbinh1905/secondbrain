@@ -1,0 +1,18 @@
+id: customer-referral
+type: idea
+path: ideas/customer-referral.md
+title: customer referral program
+status: pending
+created: 2026-08-09
+touched: 2026-08-09 (24d ago)
+nudge_after: 14d
+backlinks[2]{id,type,via,title}:
+  platform-team,         person, body, Platform team
+  referral-pitch-review, event,  body, review the São Paulo referral pitch deck
+body:
+  Every referrer earns a share of the reward. Unclear whether it counts
+  the first order or the whole customer lifetime.
+attention[1]: past its 14d nudge horizon by 10d
+help[2]:
+  - Run `brain-axi update customer-referral --status <status>` to change it
+  - Open ideas/customer-referral.md to edit it by hand

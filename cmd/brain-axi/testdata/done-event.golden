@@ -1,0 +1,5 @@
+updated: platform-team-sync-20260904
+path: events/2026-09-04-platform-team-sync.md
+changed[1]{key,from,to}:
+  status, scheduled, done
+help[1]: Run `brain-axi show platform-team-sync-20260904` to see the record

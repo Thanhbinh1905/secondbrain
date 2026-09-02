@@ -1,0 +1,21 @@
+id: standup
+type: event
+path: events/2026-09-02-standup.md
+title: standup
+status: scheduled
+when: 2026-09-02T09:00:00+07:00
+duration: 30m
+ends: 2026-09-02T09:30:00+07:00
+rrule: FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR
+next_occurrence: 2026-09-04T09:00:00+07:00
+exceptions: 2026-09-03
+created: 2026-08-01
+body_links[1]{id,resolved,title}:
+  platform-team, yes, Platform team
+with[1]{id,resolved,title}:
+  platform-team, yes, Platform team
+body:
+  Daily sync with [[platform-team]].
+help[2]:
+  - Run `brain-axi update standup --status <status>` to change it
+  - Open events/2026-09-02-standup.md to edit it by hand

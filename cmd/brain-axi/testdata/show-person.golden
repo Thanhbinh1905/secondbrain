@@ -1,0 +1,22 @@
+id: platform-team
+type: person
+path: people/platform-team.md
+title: Platform team
+created: 2026-08-01
+body_links[1]{id,resolved,title}:
+  customer-referral, yes, customer referral program
+backlinks[4]{id,type,via,title}:
+  ci-capacity,                 note,  raise_with,    ask the Zürich datacentre team about CI capacity
+  migrate-staging-db,          task,  body+assignee, migrate the staging database
+  platform-team-sync-20260904, event, with,          Platform team sync
+  standup,                     event, body+with,     standup
+open_items[1]{due,id,title,assignee,status,flag}:
+  "-", migrate-staging-db, migrate the staging database, platform-team, waiting, unchecked-28d
+closed_items[0]: nothing assigned to them has closed
+agenda[1]{id,type,title,waiting}:
+  ci-capacity, note, ask the Zürich datacentre team about CI capacity, 1d
+body:
+  Owns the shared platform services. Related to [[customer-referral]].
+help[2]:
+  - Run `brain-axi update platform-team --status <status>` to change it
+  - Open people/platform-team.md to edit it by hand

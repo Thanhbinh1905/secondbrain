@@ -1,0 +1,16 @@
+{
+  "due": [
+    {
+      "category": "delegated",
+      "id": "migrate-staging-db",
+      "kind": "task",
+      "title": "migrate the staging database",
+      "reason": "platform-team has had this for 28d with no update, past its 14d follow-up horizon",
+      "person": "platform-team",
+      "days": 28,
+      "window": "14d",
+      "path": "tasks/migrate-staging-db.md"
+    }
+  ],
+  "now": "2026-09-02T12:00:00+07:00"
+}

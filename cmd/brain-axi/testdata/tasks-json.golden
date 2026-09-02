@@ -1,0 +1,30 @@
+{
+  "now": "2026-09-02T12:00:00+07:00",
+  "tasks": [
+    {
+      "id": "review-backup-policy",
+      "title": "review the backup policy",
+      "status": "open",
+      "due": "2026-09-05T17:00:00+07:00",
+      "due_in_days": 3,
+      "overdue": false,
+      "age_days": 1,
+      "horizon_days": 3,
+      "past_follow_up": false,
+      "touched": "2026-09-01",
+      "path": "tasks/review-backup-policy.md"
+    },
+    {
+      "id": "migrate-staging-db",
+      "title": "migrate the staging database",
+      "status": "waiting",
+      "assignee": "platform-team",
+      "overdue": false,
+      "age_days": 28,
+      "horizon_days": 14,
+      "past_follow_up": true,
+      "touched": "2026-08-05",
+      "path": "tasks/migrate-staging-db.md"
+    }
+  ]
+}

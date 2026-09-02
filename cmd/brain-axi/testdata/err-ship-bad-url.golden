@@ -1,0 +1,1 @@
+error: flag --pr: "https://example.com/whatever": is not a pull request or merge request URL; expected a path like /owner/repo/pull/12 or /group/project/-/merge_requests/12

@@ -1,0 +1,10 @@
+added: event
+id: 1-1-with-the-team-20260911
+path: events/2026-09-11-1-1-with-the-team.md
+title: 1-1 with the team
+when: 2026-09-11T10:00:00+07:00 (Friday)
+duration: 45m
+rrule: FREQ=WEEKLY;BYDAY=FR
+help[2]:
+  - Run `brain-axi show 1-1-with-the-team-20260911` to check it
+  - Echo the resolved absolute date and weekday back to the user

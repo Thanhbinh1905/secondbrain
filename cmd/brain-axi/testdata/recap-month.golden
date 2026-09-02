@@ -1,0 +1,30 @@
+brain-axi recap - 2026-09
+2026-09-01 to 2026-09-30, Asia/Bangkok
+SHIPPED
+  ideas shipped                          0 (-1 vs 2026-08)
+  nothing is recorded as shipped in this period
+COMMITMENTS
+  commitments kept                                       0
+  commitments made                        1 (0 vs 2026-08)
+  2026-09-01  review the backup poli… review-backup-policy
+PULL REQUESTS
+  merged in this period                                  0
+  opened in this period                            unknown
+  open or draft now                                      1
+  closed now                                             0
+  no pull request is recorded as merged in this period
+MEETINGS
+  meetings held                          1 (+1 vs 2026-08)
+  ideas linked to them                    0 (0 vs 2026-08)
+  2026-09-02  standup                              standup
+DELEGATED
+  delegated items done                                   0
+  delegated items still unchecked                        1
+  28d  migrate the staging database     migrate-staging-db
+DORMANT IDEAS
+  ideas past the dormancy window                         0
+  no idea is past the dormancy window
+every number counted from this vault
+help[2]:
+  - Every number here comes from this vault, and every comparison is against its own previous period
+  - Run `brain-axi recap month --verify-forge` to re-read the linked forges as well

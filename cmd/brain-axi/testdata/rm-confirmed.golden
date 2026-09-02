@@ -1,0 +1,3 @@
+removed: calendar-export
+path: ideas/calendar-export.md
+help[1]: Run `git checkout -- ideas/calendar-export.md` inside the vault to bring it back if it was committed

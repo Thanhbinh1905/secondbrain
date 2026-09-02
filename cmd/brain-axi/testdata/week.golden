@@ -1,0 +1,18 @@
+range: 2026-08-31..2026-09-06
+events[5]{when,id,title,with,flag}:
+  2026-09-02 09:00-09:30, standup,                     standup,                                  platform-team, recurring
+  2026-09-02 15:00-16:00, referral-pitch-review,       review the São Paulo referral pitch deck, -,             next
+  2026-09-04 09:00-09:30, standup,                     standup,                                  platform-team, recurring
+  2026-09-04 14:00-15:00, platform-team-sync-20260904, Platform team sync,                       platform-team, -
+  2026-09-05 10:00-10:45, one-on-one-20260905,         Design jam,                               -,             -
+tasks[2]{due,id,title,assignee,status,flag}:
+  2026-09-05T17:00:00+07:00, review-backup-policy, review the backup policy,     -,             open,    -
+  "-",                       migrate-staging-db,   migrate the staging database, platform-team, waiting, unchecked-28d
+raise_with[1]{person,id,type,title,waiting}:
+  platform-team, ci-capacity, note, ask the Zürich datacentre team about CI capacity, 1d
+attention[2]:
+  - next: referral-pitch-review at 15:00 02/09
+  - migrate-staging-db: delegated to platform-team and not checked for 28d, past its 14d follow-up horizon
+help[2]:
+  - Run `brain-axi week` for the rest of the week
+  - Run `brain-axi show <id>` for one event's body and links

@@ -1,0 +1,16 @@
+{
+  "agenda": [
+    {
+      "id": "ci-capacity",
+      "kind": "note",
+      "title": "ask the Zürich datacentre team about CI capacity",
+      "waiting_days": 1,
+      "path": "notes/ci-capacity.md"
+    }
+  ],
+  "has_profile": true,
+  "now": "2026-09-02T12:00:00+07:00",
+  "path": "people/platform-team.md",
+  "person": "platform-team",
+  "title": "Platform team"
+}

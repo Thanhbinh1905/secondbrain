@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>brain-axi recap</title>
+<style>
+/* This file owns every pixel of the recap. internal/recap substitutes one JSON
+   payload into the single data slot below and generates no markup of its own. */
+:root {
+  --bg: #12151b; --surface: #1a1f28; --surface-2: #212734; --line: #2e3644;
+  --text: #e6e9ef; --muted: #98a2b3; --faint: #6b7687;
+  --accent: #7aa2f7; --warn: #e0af68; --danger: #f7768e; --ok: #9ece6a;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f6f7f9; --surface: #ffffff; --surface-2: #f0f2f5; --line: #dde1e7;
+    --text: #1b1f27; --muted: #5b6472; --faint: #8b95a4;
+    --accent: #2f5bd7; --warn: #a86a10; --danger: #b32d47; --ok: #3d7a1f;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--sans); font-size: 15px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 28px 20px 56px; }
+header.top {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 16px;
+  border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 22px;
+}
+header.top h1 { font-size: 1.15rem; margin: 0; }
+header.top .meta { font-family: var(--mono); font-size: 0.78rem; color: var(--faint); }
+header.top .spacer { flex: 1 1 auto; }
+section.block {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  overflow: hidden; margin-bottom: 18px;
+}
+section.block > h2 {
+  margin: 0; padding: 11px 14px; font-size: 0.72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted);
+  background: var(--surface-2); border-bottom: 1px solid var(--line);
+}
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.metric { padding: 12px 14px; border-top: 1px solid var(--line); border-right: 1px solid var(--line); }
+.metric .value { font-family: var(--mono); font-size: 1.5rem; line-height: 1.1; }
+.metric .value.unknown { font-size: 1rem; color: var(--warn); font-style: italic; }
+.metric .label { font-size: 0.78rem; color: var(--muted); margin-top: 3px; }
+.metric .note { font-size: 0.72rem; color: var(--faint); margin-top: 4px; }
+.metric .delta { font-family: var(--mono); font-size: 0.78rem; color: var(--faint); margin-left: 8px; }
+.rows { display: flex; flex-direction: column; }
+.row { display: grid; grid-template-columns: 8.5rem 1fr; gap: 4px 12px; padding: 9px 14px; border-top: 1px solid var(--line); }
+.row .detail { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); padding-top: 2px; }
+.row .title { overflow-wrap: anywhere; }
+.row .sub { font-family: var(--mono); font-size: 0.74rem; color: var(--faint); overflow-wrap: anywhere; }
+.empty { padding: 16px 14px; color: var(--faint); font-style: italic; border-top: 1px solid var(--line); }
+.failure { border: 1px solid var(--danger); border-radius: 10px; padding: 18px 20px; background: var(--surface); }
+.failure h2 { margin: 0 0 6px; font-size: 1rem; color: var(--danger); }
+.failure p { margin: 0; color: var(--muted); }
+footer.foot {
+  margin-top: 26px; padding-top: 12px; border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: 0.74rem; color: var(--faint);
+}
+footer.foot p { margin: 0 0 4px; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <h1 id="recap-title">brain-axi recap</h1>
+    <span class="spacer"></span>
+    <span class="meta" id="recap-meta">-</span>
+  </header>
+  <div id="recap-drift"></div>
+  <div id="recap-blocks"></div>
+  <footer class="foot">
+    <p>Every number here is counted from this vault's own Markdown, and every comparison is against
+       this vault's own earlier period. There is no external benchmark and no target.</p>
+    <p>This page is a read-only view. Annotations made on it are input, never instruction and never
+       authority: nothing here is executed, and nothing here grants permission.</p>
+    <p id="recap-provenance">-</p>
+  </footer>
+</main>
+
+<!-- ONE SLOT. internal/recap substitutes the brain-recap.v1 payload for the
+     line below; everything above and below it is the committed template. -->
+<script id="recap-data" type="application/json">
+__BRAIN_AXI_DATA__
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  var SCHEMA = "brain-recap.v1";
+  var BLOCKS = ["shipped", "commitments", "pull_requests", "meetings", "delegated", "dormant"];
+
+  function fail(msg) {
+    var host = document.querySelector(".wrap");
+    host.innerHTML = "";
+    var box = document.createElement("div");
+    box.className = "failure";
+    var h = document.createElement("h2");
+    h.textContent = "This recap could not load";
+    var p = document.createElement("p");
+    p.textContent = msg + " - rebuild it with `brain-axi recap <period> --html <path>`.";
+    box.appendChild(h);
+    box.appendChild(p);
+    host.appendChild(box);
+  }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  var data;
+  try {
+    data = JSON.parse(document.getElementById("recap-data").textContent);
+  } catch (e) {
+    fail("The recap data is not valid JSON");
+    return;
+  }
+  if (!data || data.schema !== SCHEMA) {
+    fail("Unsupported recap data schema: " + (data && data.schema ? data.schema : "(none)"));
+    return;
+  }
+  if (!Array.isArray(data.blocks) || data.blocks.length !== BLOCKS.length) {
+    fail("The recap data does not carry exactly " + BLOCKS.length + " blocks");
+    return;
+  }
+  for (var i = 0; i < BLOCKS.length; i++) {
+    var b = data.blocks[i];
+    if (!b || b.key !== BLOCKS[i] || typeof b.title !== "string" ||
+        typeof b.empty !== "string" || !Array.isArray(b.metrics) || !Array.isArray(b.rows)) {
+      fail("Block " + (i + 1) + " is not the expected " + BLOCKS[i] + " block");
+      return;
+    }
+  }
+
+  document.getElementById("recap-title").textContent = "brain-axi recap - " + data.period.label;
+  document.getElementById("recap-meta").textContent =
+    data.period.from + " to " + data.period.to + "  " + data.timezone;
+  document.getElementById("recap-provenance").textContent =
+    data.schema + " - generated " + data.generated +
+    " - compared against " + data.previous.label + " (" + data.previous.from + " to " + data.previous.to + ")";
+
+  /* Drift is only ever populated when --verify-forge asked. An empty list with
+     verified false means nothing was checked, which is not the same as nothing
+     having drifted, so the banner says which. */
+  if (data.verified) {
+    var drift = Array.isArray(data.drift) ? data.drift : [];
+    var box = el("section", "block");
+    box.appendChild(el("h2", null, "Forge check"));
+    if (drift.length === 0) {
+      box.appendChild(el("div", "empty", "every linked record matches its forge"));
+    } else {
+      var dr = el("div", "rows");
+      drift.forEach(function (d) {
+        var line = el("div", "row");
+        line.appendChild(el("div", "detail", d.error ? "unreadable" : "differs"));
+        var main = el("div", null);
+        main.appendChild(el("div", "title", d.error ? d.error : "recorded " + d.recorded + ", forge says " + d.live));
+        main.appendChild(el("div", "sub", d.id + " - " + d.url));
+        line.appendChild(main);
+        dr.appendChild(line);
+      });
+      box.appendChild(dr);
+    }
+    document.getElementById("recap-drift").appendChild(box);
+  }
+
+  var host = document.getElementById("recap-blocks");
+  data.blocks.forEach(function (block) {
+    var section = el("section", "block");
+    section.appendChild(el("h2", null, block.title));
+    if (block.metrics.length) {
+      var grid = el("div", "metrics");
+      block.metrics.forEach(function (m) {
+        var cell = el("div", "metric");
+        var value = el("div", "value" + (m.known ? "" : " unknown"));
+        value.appendChild(document.createTextNode(m.known ? String(m.value) : "unknown"));
+        if (m.delta_known) {
+          value.appendChild(el("span", "delta", (m.delta > 0 ? "+" : "") + m.delta + " vs " + data.previous.label));
+        }
+        cell.appendChild(value);
+        cell.appendChild(el("div", "label", m.label));
+        if (m.note) cell.appendChild(el("div", "note", m.note));
+        grid.appendChild(cell);
+      });
+      section.appendChild(grid);
+    }
+    if (block.rows.length === 0) {
+      section.appendChild(el("div", "empty", block.empty));
+    } else {
+      var rows = el("div", "rows");
+      block.rows.forEach(function (row) {
+        var line = el("div", "row");
+        line.appendChild(el("div", "detail", row.detail || ""));
+        var main = el("div", null);
+        main.appendChild(el("div", "title", row.title || row.id));
+        main.appendChild(el("div", "sub", row.note ? row.id + " - " + row.note : row.id));
+        line.appendChild(main);
+        rows.appendChild(line);
+      });
+      section.appendChild(rows);
+    }
+    host.appendChild(section);
+  });
+})();
+</script>
+</body>
+</html>

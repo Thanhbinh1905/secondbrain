@@ -1,0 +1,7 @@
+added: note
+id: daily-2026-09-01
+path: daily/2026-09-01.md
+title: ask the Zürich datacentre team about CI capacity
+when: 2026-09-01T09:12:00+07:00
+note: appended to today's daily file
+help[1]: Run `brain-axi show daily-2026-09-01` to check it

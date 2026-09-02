@@ -1,0 +1,37 @@
+{
+  "age_days": 24,
+  "backlinks": [
+    {
+      "id": "platform-team",
+      "path": "people/platform-team.md",
+      "title": "Platform team",
+      "type": "person",
+      "via": [
+        "body"
+      ]
+    },
+    {
+      "id": "referral-pitch-review",
+      "path": "events/2026-09-02-referral-pitch-review.md",
+      "title": "review the São Paulo referral pitch deck",
+      "type": "event",
+      "via": [
+        "body"
+      ]
+    }
+  ],
+  "body": "\nEvery referrer earns a share of the reward. Unclear whether it counts\nthe first order or the whole customer lifetime.\n",
+  "body_links": [],
+  "created": "2026-08-09",
+  "id": "customer-referral",
+  "links": [],
+  "nudge_after": "14d",
+  "past_horizon": true,
+  "path": "ideas/customer-referral.md",
+  "raise_with": [],
+  "status": "pending",
+  "title": "customer referral program",
+  "touched": "2026-08-09",
+  "type": "idea",
+  "with_profiles": []
+}

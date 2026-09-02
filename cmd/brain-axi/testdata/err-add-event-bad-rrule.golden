@@ -1,0 +1,1 @@
+error: flag --rrule: invalid rrule "FREQ=NEVER": undefined frequency: NEVER; expected an RFC 5545 rule such as FREQ=WEEKLY;BYDAY=FR

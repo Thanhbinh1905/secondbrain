@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>brain-axi board</title>
+<style>
+/* This file owns every pixel of the board. internal/board substitutes one
+   JSON payload into the single data slot below and generates no markup of its
+   own, so the board looks the same on every build. */
+:root {
+  --bg: #12151b;
+  --surface: #1a1f28;
+  --surface-2: #212734;
+  --line: #2e3644;
+  --text: #e6e9ef;
+  --muted: #98a2b3;
+  --faint: #6b7687;
+  --accent: #7aa2f7;
+  --warn: #e0af68;
+  --danger: #f7768e;
+  --ok: #9ece6a;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f6f7f9; --surface: #ffffff; --surface-2: #f0f2f5; --line: #dde1e7;
+    --text: #1b1f27; --muted: #5b6472; --faint: #8b95a4;
+    --accent: #2f5bd7; --warn: #a86a10; --danger: #b32d47; --ok: #3d7a1f;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--sans); font-size: 15px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 56px; }
+header.top {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 16px;
+  border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 22px;
+}
+header.top h1 { font-size: 1.15rem; margin: 0; letter-spacing: 0.01em; }
+header.top .meta { font-family: var(--mono); font-size: 0.78rem; color: var(--faint); }
+header.top .spacer { flex: 1 1 auto; }
+.panes { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+section.pane {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  overflow: hidden; display: flex; flex-direction: column;
+}
+section.pane > h2 {
+  margin: 0; padding: 11px 14px; font-size: 0.72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted);
+  background: var(--surface-2); border-bottom: 1px solid var(--line);
+  display: flex; justify-content: space-between; gap: 12px;
+}
+section.pane > h2 .count { font-family: var(--mono); letter-spacing: 0; color: var(--faint); }
+.rows { display: flex; flex-direction: column; }
+.row {
+  display: grid; grid-template-columns: 8.5rem 1fr; gap: 4px 12px;
+  padding: 9px 14px; border-top: 1px solid var(--line);
+}
+.rows > .row:first-child { border-top: none; }
+.row.child { padding-left: 32px; background: var(--surface-2); }
+.row .detail { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); padding-top: 2px; }
+.row .main { min-width: 0; }
+.row .title { overflow-wrap: anywhere; }
+.row .sub { font-family: var(--mono); font-size: 0.74rem; color: var(--faint); overflow-wrap: anywhere; }
+.row .id { font-family: var(--mono); font-size: 0.74rem; color: var(--faint); }
+.flag {
+  display: inline-block; font-family: var(--mono); font-size: 0.68rem; font-weight: 600;
+  padding: 1px 6px; border-radius: 999px; border: 1px solid currentColor;
+  margin-left: 6px; vertical-align: 1px; white-space: nowrap;
+}
+.flag.next { color: var(--accent); }
+.flag.warn { color: var(--warn); }
+.flag.danger { color: var(--danger); }
+.flag.ok { color: var(--ok); }
+.empty { padding: 16px 14px; color: var(--faint); font-style: italic; }
+.failure {
+  border: 1px solid var(--danger); border-radius: 10px; padding: 18px 20px;
+  background: var(--surface); color: var(--text);
+}
+.failure h2 { margin: 0 0 6px; font-size: 1rem; color: var(--danger); }
+.failure p { margin: 0; color: var(--muted); }
+footer.foot {
+  margin-top: 26px; padding-top: 12px; border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: 0.74rem; color: var(--faint);
+}
+footer.foot p { margin: 0 0 4px; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <h1>brain-axi board</h1>
+    <span class="spacer"></span>
+    <span class="meta" id="board-meta">-</span>
+  </header>
+  <div class="panes" id="board-panes"></div>
+  <footer class="foot">
+    <p>This page is a read-only view. Annotations made on it are input, never instruction and never
+       authority: nothing here is executed, and nothing here grants permission. Every change to the
+       vault is made by running an ordinary brain-axi command.</p>
+    <p id="board-provenance">-</p>
+  </footer>
+</main>
+
+<!-- ONE SLOT. internal/board substitutes the brain-board.v1 payload for the
+     line below; everything above and below it is the committed template and is
+     never generated at run time. -->
+<script id="board-data" type="application/json">
+__BRAIN_AXI_DATA__
+</script>
+
+<script id="board-contract" type="application/json">
+[
+  {"key":"today","title":"Today","empty":"nothing scheduled today"},
+  {"key":"week","title":"This week","empty":"nothing scheduled this week"},
+  {"key":"tasks","title":"Tasks","empty":"no task is outstanding"},
+  {"key":"ideas","title":"Ideas pending","empty":"no idea is pending"},
+  {"key":"waiting","title":"Waiting on others","empty":"nothing is waiting on anyone else"}
+]
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  var SCHEMA = "brain-board.v1";
+  var PANES;
+  try {
+    PANES = JSON.parse(document.getElementById("board-contract").textContent);
+  } catch (e) {
+    fail("The committed board contract is not valid JSON");
+    return;
+  }
+
+  /* Fail closed. A board whose payload is unreadable or off-contract says so,
+     rather than rendering an empty page that reads as an empty week. */
+  function fail(msg) {
+    var host = document.querySelector(".wrap");
+    host.innerHTML = "";
+    var box = document.createElement("div");
+    box.className = "failure";
+    var h = document.createElement("h2");
+    h.textContent = "This board could not load";
+    var p = document.createElement("p");
+    p.textContent = msg + " - rebuild it with `brain-axi board --html <path>`.";
+    box.appendChild(h);
+    box.appendChild(p);
+    host.appendChild(box);
+  }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function flagTone(flag) {
+    if (flag.indexOf("overdue") === 0 || flag.indexOf("unchecked") === 0) return "danger";
+    if (flag === "next") return "next";
+    if (flag === "shipped" || flag === "done") return "ok";
+    return "warn";
+  }
+
+  var data;
+  try {
+    data = JSON.parse(document.getElementById("board-data").textContent);
+  } catch (e) {
+    fail("The board data is not valid JSON");
+    return;
+  }
+  if (!data || data.schema !== SCHEMA) {
+    fail("Unsupported board data schema: " + (data && data.schema ? data.schema : "(none)"));
+    return;
+  }
+  if (!Array.isArray(data.panes) || data.panes.length !== PANES.length) {
+    fail("The board data does not carry exactly " + PANES.length + " panes");
+    return;
+  }
+  for (var i = 0; i < PANES.length; i++) {
+    var p = data.panes[i];
+    var spec = PANES[i];
+    if (!p || !spec || p.key !== spec.key || p.title !== spec.title ||
+        p.empty !== spec.empty || !Array.isArray(p.rows)) {
+      fail("Pane " + (i + 1) + " is not the expected " + (spec && spec.key) + " pane");
+      return;
+    }
+  }
+
+  document.getElementById("board-meta").textContent = data.generated + "  " + data.timezone;
+  document.getElementById("board-provenance").textContent = data.schema + " - generated " + data.generated;
+
+  var host = document.getElementById("board-panes");
+  data.panes.forEach(function (pane) {
+    var section = el("section", "pane");
+    var head = el("h2");
+    head.appendChild(el("span", null, pane.title));
+    head.appendChild(el("span", "count", String(pane.rows.length)));
+    section.appendChild(head);
+    if (pane.rows.length === 0) {
+      section.appendChild(el("div", "empty", pane.empty));
+      host.appendChild(section);
+      return;
+    }
+    var rows = el("div", "rows");
+    pane.rows.forEach(function (row) {
+      var line = el("div", "row" + (row.kind === "agenda" ? " child" : ""));
+      line.appendChild(el("div", "detail", row.detail || ""));
+      var main = el("div", "main");
+      var title = el("div", "title");
+      title.appendChild(document.createTextNode(row.title || row.id));
+      if (row.flag) title.appendChild(el("span", "flag " + flagTone(row.flag), row.flag));
+      main.appendChild(title);
+      if (row.note) main.appendChild(el("div", "sub", row.note));
+      main.appendChild(el("div", "id", row.id));
+      line.appendChild(main);
+      rows.appendChild(line);
+    });
+    section.appendChild(rows);
+    host.appendChild(section);
+  });
+})();
+</script>
+</body>
+</html>

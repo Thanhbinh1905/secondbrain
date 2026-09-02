@@ -1,0 +1,32 @@
+{
+  "hits": [
+    {
+      "id": "referral-pitch-review",
+      "kind": "event",
+      "field": "id",
+      "line": "review the São Paulo referral pitch deck",
+      "line_number": 0,
+      "exact": true,
+      "path": "events/2026-09-02-referral-pitch-review.md"
+    },
+    {
+      "id": "customer-referral",
+      "kind": "idea",
+      "field": "id",
+      "line": "customer referral program",
+      "line_number": 0,
+      "exact": true,
+      "path": "ideas/customer-referral.md"
+    },
+    {
+      "id": "platform-team",
+      "kind": "person",
+      "field": "body",
+      "line": "Owns the shared platform services. Related to [[customer-referral]].",
+      "line_number": 8,
+      "exact": true,
+      "path": "people/platform-team.md"
+    }
+  ],
+  "query": "referral"
+}

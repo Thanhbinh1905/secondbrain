@@ -1,0 +1,5 @@
+added: person
+id: datacentre-team
+path: people/datacentre-team.md
+title: Datacentre team
+help[1]: Run `brain-axi show datacentre-team` to check it

@@ -1,0 +1,29 @@
+{
+  "id": "customer-referral",
+  "path": "ideas/customer-referral.md",
+  "pointed_to_by": [
+    {
+      "id": "platform-team",
+      "kind": "person",
+      "title": "Platform team",
+      "via": [
+        "body"
+      ],
+      "resolved": true,
+      "path": "people/platform-team.md"
+    },
+    {
+      "id": "referral-pitch-review",
+      "kind": "event",
+      "title": "review the São Paulo referral pitch deck",
+      "via": [
+        "body"
+      ],
+      "resolved": true,
+      "path": "events/2026-09-02-referral-pitch-review.md"
+    }
+  ],
+  "points_to": [],
+  "title": "customer referral program",
+  "type": "idea"
+}

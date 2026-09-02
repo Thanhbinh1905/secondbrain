@@ -1,0 +1,30 @@
+{
+  "note": "review is interactive; run it on a terminal, or use `update <id> --status ...` per record",
+  "pending_review": [
+    {
+      "id": "customer-referral",
+      "title": "customer referral program",
+      "status": "pending",
+      "age_days": 24,
+      "horizon_days": 14,
+      "past_horizon": true,
+      "created": "2026-08-09",
+      "touched": "2026-08-09",
+      "path": "ideas/customer-referral.md"
+    }
+  ],
+  "pending_tasks": [
+    {
+      "id": "migrate-staging-db",
+      "title": "migrate the staging database",
+      "status": "waiting",
+      "assignee": "platform-team",
+      "overdue": false,
+      "age_days": 28,
+      "horizon_days": 14,
+      "past_follow_up": true,
+      "touched": "2026-08-05",
+      "path": "tasks/migrate-staging-db.md"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+# Your brain. Private, never tracked by this repo, and its own git repo.
+/vault/
+
+# Go build output
+/brain-axi
+/dist/

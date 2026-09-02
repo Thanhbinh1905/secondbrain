@@ -1,0 +1,7 @@
+tasks[2]{due,id,title,assignee,status,flag}:
+  2026-09-05T17:00:00+07:00, review-backup-policy, review the backup policy,     -,             open,    -
+  "-",                       migrate-staging-db,   migrate the staging database, platform-team, waiting, unchecked-28d
+attention[1]: migrate-staging-db: delegated to platform-team and not checked for 28d, past its 14d follow-up horizon
+help[2]:
+  - Run `brain-axi done <id>` when one is finished
+  - Run `brain-axi update <id> --status waiting` when it is with somebody else

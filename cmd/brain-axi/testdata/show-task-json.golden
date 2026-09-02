@@ -1,0 +1,40 @@
+{
+  "age_days": 28,
+  "assignee": "platform-team",
+  "assignee_profile": {
+    "id": "platform-team",
+    "resolved": true
+  },
+  "backlinks": [],
+  "body": "\nAssigned to [[platform-team]]. Not checked in on yet.\n",
+  "body_links": [
+    {
+      "id": "platform-team",
+      "resolved": true
+    }
+  ],
+  "created": "2026-08-01",
+  "fleet_tasks": [
+    "PROJ-42"
+  ],
+  "follow_up_after": "14d",
+  "forge": {
+    "cached": true,
+    "checked": true,
+    "checked_age": "13d ago",
+    "checked_at": "2026-08-20T10:15:00+07:00",
+    "checks": "pending",
+    "state": "open",
+    "url": "https://git.example.com/platform/service/-/merge_requests/42"
+  },
+  "id": "migrate-staging-db",
+  "links": [],
+  "past_follow_up": true,
+  "path": "tasks/migrate-staging-db.md",
+  "raise_with": [],
+  "status": "waiting",
+  "title": "migrate the staging database",
+  "touched": "2026-08-05",
+  "type": "task",
+  "with_profiles": []
+}

@@ -1,0 +1,7 @@
+ideas[6]{id,title,age,touched}:
+  customer-referral, customer referral program,      23d, 2026-08-09
+  shared-vault,      share a vault across a team,     8d, 2026-08-24
+  calendar-export,   export the calendar as .ics,     2d, 2026-08-30
+  planning,          Café planning,                   2d, 2026-08-30
+  ci-capacity,       ask the Zürich datacentre team,  1d, 2026-08-31
+  tokyo-capacity,    東京リージョンの容量を確認,      1d, 2026-08-31

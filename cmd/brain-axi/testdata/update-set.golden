@@ -1,0 +1,6 @@
+updated: customer-referral
+path: ideas/customer-referral.md
+changed[2]{key,from,to}:
+  nudge_after, 14d,     30d
+  owner,       (unset), platform-team
+help[1]: Run `brain-axi show customer-referral` to see the record

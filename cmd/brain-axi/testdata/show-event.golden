@@ -1,0 +1,18 @@
+id: platform-team-sync-20260904
+type: event
+path: events/2026-09-04-platform-team-sync.md
+title: Platform team sync
+status: scheduled
+when: 2026-09-04T14:00:00+07:00
+duration: 60m
+ends: 2026-09-04T15:00:00+07:00
+created: 2026-09-01
+with[1]{id,resolved,title}:
+  platform-team, yes, Platform team
+backlinks[1]{id,type,via,title}:
+  calendar-export, idea, links, export the calendar as .ics
+body:
+  Decide how expired schedules are handled.
+help[2]:
+  - Run `brain-axi update platform-team-sync-20260904 --status <status>` to change it
+  - Open events/2026-09-04-platform-team-sync.md to edit it by hand

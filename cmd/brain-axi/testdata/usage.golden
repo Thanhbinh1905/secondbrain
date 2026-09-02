@@ -1,0 +1,60 @@
+usage: brain-axi [command] [args] [flags]
+commands[25]:
+  (none)=dashboard, today, week, agenda, due, add, ideas, tasks, search, show,
+  related, board, recap, done, update, link, ship, pr, rm, review, export,
+  brief, init, setup, doctor
+flags[6]:
+  --json (machine-readable output), --vault <path> (after command),
+  --now <timestamp> or $BRAIN_AXI_NOW (fixed clock, for tests),
+  --limit <n> (search), --help, -v/-V/--version
+examples:
+  brain-axi
+  brain-axi today
+  brain-axi week --json
+  brain-axi agenda --from 2026-09-01 --to 2026-09-07
+  brain-axi agenda platform-team    # what is waiting to be raised with them
+  brain-axi due
+  brain-axi due --delegated --json
+  brain-axi add event "Platform team sync" --when 2026-09-04T14:00 --duration 60m --with platform-team
+  brain-axi add event "standup" --when 2026-09-02T09:00 --duration 30m --rrule FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR
+  brain-axi add idea "customer referral program" --status pending
+  brain-axi add task "review CI capacity" --due 2026-09-05T17:00 --follow-up-after 7d
+  brain-axi add task "migrate the staging database" --assignee platform-team --follow-up-after 14d
+  brain-axi add note "ask the infrastructure team about CI capacity"
+  brain-axi add person "Platform team"
+  brain-axi add --batch meeting-2026-09-04.yml
+  brain-axi ideas --status pending --stale 14d
+  brain-axi tasks --assignee platform-team
+  brain-axi search "zurich"          # diacritic-insensitive: finds "Zürich"
+  brain-axi show customer-referral
+  brain-axi related platform-team-sync-20260904
+  brain-axi board
+  brain-axi board --html ~/secondbrain/board.html
+  brain-axi recap month
+  brain-axi recap --from 2026-07-01 --to 2026-09-30 --json
+  brain-axi done platform-team-sync-20260904
+  brain-axi update customer-referral --status building
+  brain-axi link migrate-staging https://github.com/owner/repo/pull/12
+  brain-axi link fleet migrate-staging --task PROJ-42
+  brain-axi ship customer-referral --pr https://github.com/owner/repo/pull/12 --merged-at 2026-09-02T11:30:00+07:00
+  brain-axi pr --refresh
+  brain-axi rm customer-referral --yes
+  brain-axi review
+  brain-axi export ics --out brain.ics
+  brain-axi brief
+  brain-axi init --timezone Europe/Lisbon
+  brain-axi setup skill --claude
+  brain-axi doctor
+"built-in":
+  update: self-upgrade, with no id argument
+  "update <id>": change a record's frontmatter
+notes:
+  the agent resolves relative dates; this tool accepts only absolute timestamps
+  every timestamp is stored with an explicit UTC offset
+  only "pr", "link --refresh", "recap --verify-forge" and "doctor" ever reach a
+  forge; every other command reads files and works offline
+  the board and the recap are written to a file; this tool opens no socket and
+  serves nothing
+help[2]:
+  - "Run `brain-axi <command> --help` for one command's flags"
+  - Run `brain-axi doctor` to check the vault

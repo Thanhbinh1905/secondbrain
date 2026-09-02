@@ -1,0 +1,12 @@
+range: 2026-09-06..2026-09-06
+events[0]: nothing scheduled today
+tasks[2]{due,id,title,assignee,status,flag}:
+  2026-09-05T17:00:00+07:00, review-backup-policy, review the backup policy,     -,             open,    overdue-1d+unchecked-5d
+  "-",                       migrate-staging-db,   migrate the staging database, platform-team, waiting, unchecked-32d
+attention[3]:
+  - review-backup-policy was due 2026-09-05T17:00:00+07:00, 1d ago
+  - review-backup-policy: nobody has checked it for 5d, past its 3d follow-up horizon
+  - migrate-staging-db: delegated to platform-team and not checked for 32d, past its 14d follow-up horizon
+help[2]:
+  - Run `brain-axi week` for the rest of the week
+  - Run `brain-axi show <id>` for one event's body and links

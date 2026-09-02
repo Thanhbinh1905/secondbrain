@@ -1,0 +1,8 @@
+person: platform-team
+title: Platform team
+path: people/platform-team.md
+agenda[1]{id,type,title,waiting}:
+  ci-capacity, note, ask the Zürich datacentre team about CI capacity, 1d
+help[2]:
+  - Run `brain-axi show platform-team` for what they are holding as well
+  - Run `brain-axi update <id> --set raised=<date>` once an item has been raised

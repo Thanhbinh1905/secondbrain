@@ -1,0 +1,3 @@
+hits[1]{id,kind,where,line}:
+  daily-2026-09-01, daily, daily/2026-09-01.md:10, - 14:30 +07:00 review the Kraków rollout schedule next week
+help[1]: Run `brain-axi show <id>` for the whole record

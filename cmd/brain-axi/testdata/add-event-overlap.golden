@@ -1,0 +1,10 @@
+added: event
+id: overlapping-slot-20260904
+path: events/2026-09-04-overlapping-slot.md
+title: overlapping slot
+when: 2026-09-04T14:30:00+07:00 (Friday)
+duration: 30m
+attention[1]: overlaps platform-team-sync-20260904 at 14:00 04/09
+help[2]:
+  - Run `brain-axi show overlapping-slot-20260904` to check it
+  - Echo the resolved absolute date and weekday back to the user

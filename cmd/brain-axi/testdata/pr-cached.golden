@@ -1,0 +1,6 @@
+pull_requests[1]{id,state,checks,checked,url}:
+  migrate-staging-db, open, pending, 2026-08-20T10:15:00+07:00 (13d ago), https://git.example.com/platform/service/-/merge_requests/42
+attention[1]: every status above is cached, as of the time in its checked column; pass --refresh to read the forges now
+help[2]:
+  - Run `brain-axi pr --refresh` to read every linked forge now
+  - Run `brain-axi doctor` to check which forges this machine can reach

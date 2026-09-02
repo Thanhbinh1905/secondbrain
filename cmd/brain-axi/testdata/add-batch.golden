@@ -1,0 +1,14 @@
+stored: 5
+ideas[1]{id,title,detail,path}:
+  cache-the-schedule-expiry-lookup, cache the schedule expiry lookup, horizon 30d, ideas/cache-the-schedule-expiry-lookup.md
+tasks[1]{id,title,detail,path}:
+  review-ci-capacity-again, review CI capacity again, "due 2026-09-05T17:00:00+07:00, follow up after 3d", tasks/review-ci-capacity-again.md
+delegated[1]{id,title,detail,path}:
+  migrate-the-staging-database-to-the-new-cluster, migrate the staging database to the new cluster, "assignee platform-team, follow up after 14d", tasks/migrate-the-staging-database-to-the-new-cluster.md
+notes[1]{id,title,detail,path}:
+  daily-2026-09-02, 2026-09-02, 1 bullet(s) appended to the daily file, daily/2026-09-02.md
+events[1]{id,title,detail,path}:
+  platform-team-follow-up-20260909, Platform team follow-up, 2026-09-09T14:00:00+07:00, events/2026-09-09-platform-team-follow-up.md
+help[2]:
+  - Read every stored row back to the user, grouped by section, so a misread is corrected now rather than in three weeks
+  - Run `brain-axi show <id>` for any row they question
