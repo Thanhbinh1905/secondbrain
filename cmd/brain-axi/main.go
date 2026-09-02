@@ -16,14 +16,70 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 	"strings"
 
 	"github.com/Thanhbinh1905/secondbrain/internal/frontmatter"
 	"github.com/Thanhbinh1905/secondbrain/internal/vault"
 )
 
-// version is stamped at build time with -ldflags "-X main.version=...".
+// version is the ldflags slot: install.sh and the release workflow stamp it
+// with -ldflags "-X main.version=...". A `go install` applies no ldflags, so it
+// is only the first of three possible answers.
 var version = "dev"
+
+// buildVersion is what every surface reports. It is resolved once, from the
+// ldflags slot and then from the build information the toolchain embedded, so
+// that a binary installed by `go install` reports the module version it was
+// built from rather than claiming to be a development build.
+var buildVersion = resolveVersion(version, debug.ReadBuildInfo)
+
+// shortRevision is how many characters of a commit hash a version carries.
+// install.sh shortens to the same width, so a checkout install and a build
+// stamped only by the Go toolchain report the same shape.
+const shortRevision = 12
+
+// resolveVersion reports the first answer that is real, and "dev" only when
+// there genuinely is none. Reporting "dev" for a binary that knows perfectly
+// well which commit it came from is a lie the user cannot check.
+//
+// The order is: the stamped ldflags value; then the module version the
+// toolchain recorded, which a module-proxy install has and which is either a
+// released tag or a pseudo-version naming the commit; then the VCS revision it
+// recorded, which a build from a checkout has, shortened and suffixed the way
+// install.sh does it.
+func resolveVersion(stamped string, buildInfo func() (*debug.BuildInfo, bool)) string {
+	if stamped != "" && stamped != "dev" {
+		return stamped
+	}
+	info, ok := buildInfo()
+	if !ok || info == nil {
+		return "dev"
+	}
+	// "(devel)" is what a build from a checkout records, and it says nothing.
+	if v := info.Main.Version; v != "" && v != "(devel)" {
+		return v
+	}
+	var revision, modified string
+	for _, setting := range info.Settings {
+		switch setting.Key {
+		case "vcs.revision":
+			revision = setting.Value
+		case "vcs.modified":
+			modified = setting.Value
+		}
+	}
+	if revision == "" {
+		return "dev"
+	}
+	if len(revision) > shortRevision {
+		revision = revision[:shortRevision]
+	}
+	if modified == "true" {
+		revision += "-dirty"
+	}
+	return revision
+}
 
 // Exit codes. They are part of the contract an agent scripts against.
 const (
@@ -233,7 +289,14 @@ notes:
 	"search": "usage: brain-axi search <text> [--limit <n>] [--json]\nMatches with and without diacritics in both directions.\n",
 	"show":   "usage: brain-axi show <id> [--json]\nPrints one record with its links and backlinks. A cached forge status is shown with the time it was read.\n",
 	"done":   "usage: brain-axi done <id> [--json]\nSets status to done for an event or a task, shipped for an idea.\n",
-	"update": "usage: brain-axi update <id> [--status <status>] [--set key=value ...] [--json]\n       brain-axi update\nWith an id, changes only the named frontmatter keys, plus touched: when the status moves.\nWith no id, upgrades the binary.\n",
+	"update": `usage: brain-axi update <id> [--status <status>] [--set key=value ...] [--json]
+       brain-axi update [--check] [--source <path>] [--json]
+With an id, changes only the named frontmatter keys, plus touched: when the status moves.
+With no id, upgrades the binary the way it was installed: a checkout install fast-forwards its
+clone and rebuilds, a release install downloads and verifies the newest published binary, and a
+` + "`go install`" + ` install is told the one command that upgrades it. Every path verifies that the
+replacement runs before it replaces anything, and --check reports without upgrading.
+`,
 	"link": `usage: brain-axi link <id> <forge-url> [--refresh] [--force] [--json]
        brain-axi link fleet <id> --task <external-id> [--json]
 Attaches a GitHub pull request or GitLab merge request to a record, self-hosted GitLab included.

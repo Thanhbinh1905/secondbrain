@@ -11,14 +11,52 @@ its own. Natural language understanding belongs to the agent that drives it.
 ### Install
 
 ```sh
+curl -fsSL https://raw.githubusercontent.com/Thanhbinh1905/secondbrain/main/install.sh | sh
+```
+
+No Go toolchain and no checkout.
+The script downloads the newest release binary for your platform, verifies it against the release's
+published `checksums.txt`, and refuses to install anything that does not match or does not run.
+It is a couple of hundred lines of POSIX shell, and
+[reading it first](https://raw.githubusercontent.com/Thanhbinh1905/secondbrain/main/install.sh) is a
+reasonable thing to do with anything you pipe into a shell.
+
+Every path installs to `~/.brain-axi/bin` and links the binary into the first of `~/.local/bin` or
+`/usr/local/bin`. `$BRAIN_AXI_INSTALL_DIR` and `$BRAIN_AXI_LINK_DIR` override both.
+
+#### With Go
+
+```sh
+go install github.com/Thanhbinh1905/secondbrain/cmd/brain-axi@latest
+```
+
+#### From a checkout, for contributors
+
+```sh
 git clone git@github.com:Thanhbinh1905/secondbrain.git
 cd secondbrain
 ./install.sh
 ```
 
-The script builds from the checkout, installs to `~/.brain-axi/bin`, links it into the first of
-`~/.local/bin` or `/usr/local/bin`, and records the checkout so `brain-axi update` knows what to
-fast-forward later. It needs Go 1.26 or newer and refuses to install a binary that does not run.
+Run from inside a checkout the script builds it rather than downloading, and records the checkout so
+an upgrade knows what to fast-forward. It needs Go 1.26 or newer. `./install.sh --release` and
+`./install.sh --checkout` demand a mode outright, so nothing depends on that detection.
+
+#### What each path reports, and how each one upgrades
+
+The three differ, and the binary knows which one it is: `install.sh` records the method beside the
+binary, and a binary with no record at all came from `go install`. A record naming something else is
+refused rather than guessed at, because guessing means either replacing a binary you did not install
+that way or printing a command that cannot work.
+
+| Installed by | `brain-axi --version` | `brain-axi update` |
+| --- | --- | --- |
+| the piped script | the release tag, `v1.2.3` | downloads the newest release, verifies its checksum, replaces |
+| `go install` | the module version the toolchain recorded: a tag, or a pseudo-version naming the commit | prints the `go install` command that upgrades it, and exits zero - nothing is wrong |
+| a checkout | the checkout's short commit, `-dirty` when it had uncommitted changes | fast-forwards the checkout, rebuilds, replaces |
+
+`--check` reports on any of them without upgrading. Every path that replaces the binary runs
+`--version` on the replacement first and keeps the old one if that fails.
 
 ### Create the vault
 
@@ -612,7 +650,7 @@ brain-axi update <id> --set links=a,b                a list key is written as a 
 brain-axi rm <id> --yes                              refuses without --yes
 brain-axi brief                                      today, what is due, what has gone stale
 brain-axi export ics --out brain.ics                 one-way iCalendar export
-brain-axi update                                     self-upgrade, then verify it runs
+brain-axi update [--check]                           self-upgrade the way it was installed
 brain-axi <command> --help                           one command's flags
 ```
 
@@ -674,7 +712,15 @@ something an agent parses.
 
 The test suite needs no network and no credentials. A scripted forge runner is installed for the
 whole CLI suite, so no test can reach a real forge by accident; the check against a real pull
-request is opt-in behind `BRAIN_AXI_FORGE_E2E=1`.
+request is opt-in behind `BRAIN_AXI_FORGE_E2E=1`. The release download path is held to the same
+rule: its download is delegated to `curl` or `wget`, and the tests supply their own.
+
+A release is cut by pushing a `v*` tag. `.github/workflows/release.yml` builds `linux/amd64`,
+`linux/arm64`, `darwin/amd64` and `darwin/arm64`, stamps the tag as the version, publishes a
+`checksums.txt` manifest beside the binaries, and attaches everything to that tag's release. Asset
+names are `brain-axi_$(uname -s)_$(uname -m)` as printed on the target, so `install.sh` computes one
+by interpolation and carries no platform table of its own; a test fails the build if the workflow
+and the binary ever disagree about that set.
 
 ## Licence
 

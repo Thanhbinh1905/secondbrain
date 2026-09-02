@@ -191,7 +191,7 @@ func (a *app) listFlag(name string) []string {
 // dispatch routes to a command.
 func (a *app) dispatch() error {
 	if a.has("version") {
-		fmt.Fprintf(a.stdout(), "brain-axi %s\n", version)
+		fmt.Fprintf(a.stdout(), "brain-axi %s\n", buildVersion)
 		return errQuiet
 	}
 	if a.has("help") {

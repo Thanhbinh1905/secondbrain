@@ -82,7 +82,7 @@ It exists because the foundation modules must be proven correct before anything 
 | Agent surface | `skills/secondbrain` · `setup skill` · `--json` on every command · `brief` for the morning brief |
 | Calendar reach | Recurring events · `.ics` one-way export |
 | Knowledge graph | Wiki-links between notes · people profiles |
-| Lifecycle | `init` · `doctor` · `update` self-upgrade · `install.sh` |
+| Lifecycle | `init` · `doctor` · `update` self-upgrade · `install.sh` · release workflow |
 | Tests | Table-driven, property-based and golden-file suites per the Testing table in [design.md](design.md) |
 
 ### One honest cost of the all-in-one decision
@@ -129,7 +129,7 @@ Ruthless surfacing of decay is the counterweight, and it ships in the first rele
 | FR-10 | Every command supports `--json`; the default is compact agent-readable text in the axi house style. |
 | FR-11 | `setup skill` installs the agent-facing skill into the detected agent's skill directory. |
 | FR-12 | An `add event` whose slot overlaps an existing event reports the overlap and still stores the event. |
-| FR-13 | `update` (self-upgrade) replaces the binary in place and verifies the replacement runs. |
+| FR-13 | `update` (self-upgrade) replaces the binary in place and verifies the replacement runs. How it upgrades follows the install method recorded beside the binary: a checkout install fast-forwards and rebuilds, a release install downloads and verifies the newest published asset, and a `go install` is told the command that upgrades it. An unrecorded method is a `go install`; an unknown or unreadable one is refused, never guessed. |
 | FR-14 | `review` presents an interactive triage of stale ideas and unchecked tasks. |
 | FR-15 | `task` is a record kind with a closed `status:` vocabulary (`open`, `waiting`, `done`, `dropped`), an optional `assignee:` resolving to a `people/` record, an optional timezone-qualified `due:`, and a `follow_up_after:` horizon. It surfaces in `today`/`week` when due, in `tasks`, in the dashboard, in `review`, and as an attention line once its follow-up horizon has passed. |
 | FR-16 | `link <id> <url>` attaches a GitHub pull request or GitLab merge request to any record. `pr [--refresh]` reports linked records' status, caching it in the record's own frontmatter with the time it was read and always displaying that time. A missing CLI, an unauthenticated host or an unreachable forge is reported as exactly that, never as unknown-therefore-fine. |
@@ -175,8 +175,11 @@ What is still literally true, and is the whole of the amendment:
 - **The board and the recap open nothing either.** Both write a file, and writing that file is the
   whole of the integration: brain-axi serves no page and listens on no port. Handing the file to an
   external viewer is an explicitly configured command, and it never becomes a network client.
-- The pre-existing delegation is unchanged: `brain-axi update` fast-forwards its checkout by running
-  `git`.
+- **An upgrade delegates its fetch too.** `brain-axi update` fast-forwards a checkout by running
+  `git`, and downloads a release asset by running `curl` or `wget`. A host with neither is told so
+  and refused; the binary does not grow an HTTP client to cover it. Nothing else about the release
+  path is different in kind: it is one more explicitly requested command shelling out to a program
+  the user already has.
 
 The last known forge status is cached in the linked record's own frontmatter, with the timestamp of
 when it was read, and that timestamp is displayed everywhere the status is (FR-16). A stale status is

@@ -1,0 +1,88 @@
+name: Release
+
+# A pushed v* tag publishes the binaries the piped installer and
+# `brain-axi update` download. Nothing else triggers this: a release is a
+# deliberate act, and the tag is what names it.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          # The single source of truth for the Go version is go.mod.
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build every published platform
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -eu
+          mkdir -p dist
+          # An asset is named "brain-axi_$(uname -s)_$(uname -m)" as printed on
+          # the target, so install.sh computes its own name by interpolation and
+          # carries no platform table it has to keep in sync. The mapping from
+          # Go's platform names lives here and in releaseAssets in
+          # cmd/brain-axi/selfupdate.go; TestReleaseAssetsMatchWorkflow fails
+          # the build if the two ever disagree.
+          #
+          # CGO_ENABLED=0 keeps NFR-2's single statically linked binary, with no
+          # runtime and no shared library.
+          build() {
+            GOOS="$1" GOARCH="$2" CGO_ENABLED=0 \
+              go build -trimpath -ldflags "-s -w -X main.version=$VERSION" \
+                -o "dist/$3" ./cmd/brain-axi
+          }
+          build linux  amd64 brain-axi_Linux_x86_64
+          build linux  arm64 brain-axi_Linux_aarch64
+          build darwin amd64 brain-axi_Darwin_x86_64
+          build darwin arm64 brain-axi_Darwin_arm64
+
+          # version.txt lets `brain-axi update --check` answer without
+          # downloading a whole binary.
+          printf '%s\n' "$VERSION" > dist/version.txt
+
+          # The manifest lists the binaries and nothing else, so it doubles as
+          # the authoritative list of published platforms that install.sh reads
+          # when it has to say a platform is not published.
+          ( cd dist && sha256sum brain-axi_* > checksums.txt )
+          cat dist/checksums.txt
+
+      - name: Refuse a build that does not run
+        run: |
+          set -eu
+          reported="$(./dist/brain-axi_Linux_x86_64 --version)"
+          echo "$reported"
+          case "$reported" in
+            "brain-axi ${{ github.ref_name }}") ;;
+            *)
+              echo "The built binary reported '$reported', not the tag it was stamped with." >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          gh release create "$VERSION" \
+            --title "$VERSION" \
+            --generate-notes \
+            dist/brain-axi_Linux_x86_64 \
+            dist/brain-axi_Linux_aarch64 \
+            dist/brain-axi_Darwin_x86_64 \
+            dist/brain-axi_Darwin_arm64 \
+            dist/checksums.txt \
+            dist/version.txt
