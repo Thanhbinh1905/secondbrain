@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -71,13 +72,23 @@ func (a *app) cmdInit() error {
 		return err
 	}
 
+	// A repository with no commits protects nothing, so what init reports has
+	// to be the state of the vault rather than the fact that a command ran.
+	commits, commitsKnown := gitCommitCount(res.Root)
 	if a.out.JSON {
-		return a.out.Emit(map[string]any{
+		payload := map[string]any{
 			"vault": res.Root, "created": res.Created, "already_present": res.AlreadyHere,
 			"git_initialised": res.GitInited, "git_skipped": res.GitSkipped,
-			"timezone": v.Config.Timezone, "week_starts": v.Config.WeekStarts,
+			"git_commits_known": commitsKnown,
+			"timezone":          v.Config.Timezone, "week_starts": v.Config.WeekStarts,
 			"nudge_after": v.Config.NudgeAfter,
-		})
+		}
+		// An unanswerable count is absent rather than zero: a reader that saw
+		// git_commits: 0 would act on a gap that may not exist.
+		if commitsKnown {
+			payload["git_commits"] = commits
+		}
+		return a.out.Emit(payload)
 	}
 	a.out.Scalar("vault", res.Root)
 	a.out.Scalar("timezone", v.Config.Timezone)
@@ -85,9 +96,13 @@ func (a *app) cmdInit() error {
 	a.out.Scalar("nudge_after", v.Config.NudgeAfter)
 	switch {
 	case res.GitInited:
-		a.out.Scalar("git", "initialised")
+		a.out.Scalar("git", "initialised, "+commitState(commits, commitsKnown))
 	case res.GitSkipped != "":
-		a.out.Scalar("git", "not initialised: "+res.GitSkipped)
+		detail := "not initialised: " + res.GitSkipped
+		if commitsKnown {
+			detail += ", " + commitState(commits, true)
+		}
+		a.out.Scalar("git", detail)
 	}
 	block := render.Block{Name: "created", Columns: render.Cols([]string{"path"}), Empty: "nothing new; the vault was already here"}
 	for _, c := range res.Created {
@@ -97,6 +112,12 @@ func (a *app) cmdInit() error {
 	var attention []string
 	if res.AlreadyHere {
 		attention = append(attention, "a config was already here and was left exactly as it was")
+	}
+	// Nothing is committed until somebody commits it, and brain-axi is not
+	// that somebody: committing the user's notes for them is their call, not
+	// this tool's. Naming the gap and the command that closes it is.
+	if commitsKnown && commits == 0 {
+		attention = append(attention, noCommitsAttention(res.Root))
 	}
 	switch remote, err := gitRemote(res.Root); {
 	case err != nil && res.GitInited:
@@ -316,7 +337,7 @@ func (a *app) cmdSetup() error {
 		return usageError("setup skill takes no extra arguments, got %s", strings.Join(a.args[1:], " "))
 	}
 	targets, err := skill.Targets(skill.Choice{
-		Claude: a.has("claude"), Codex: a.has("codex"), Dir: a.flagOr("dir", ""),
+		Claude: a.has("claude"), Codex: a.has("codex"), Pi: a.has("pi"), Dir: a.flagOr("dir", ""),
 	})
 	if err != nil {
 		return usageError("%v", err)
@@ -388,9 +409,16 @@ func (r *doctorReport) add(name, detail string, ok bool) {
 func (a *app) diagnose() doctorReport {
 	rep := doctorReport{}
 	if err := a.openVault(); err != nil {
-		rep.add("vault", "not found", false)
+		detail := "not found"
+		help := "Run `brain-axi init` to create a vault"
+		var ambiguous *vault.AmbiguousError
+		if errors.As(err, &ambiguous) {
+			detail = "choice required"
+			help = "Name the one you mean with `--vault <path>` or $BRAIN_AXI_VAULT=<path>"
+		}
+		rep.add("vault", detail, false)
 		rep.Attention = append(rep.Attention, strings.ReplaceAll(err.Error(), "\n", "; "))
-		rep.Help = append(rep.Help, "Run `brain-axi init` to create a vault")
+		rep.Help = append(rep.Help, help)
 		rep.add("binary", buildVersion, true)
 		rep.Fatal = "no vault to check"
 		return rep
@@ -650,10 +678,12 @@ func (a *app) gitDetail(rep *doctorReport) string {
 			parts = append(parts, "uncommitted changes")
 		}
 	}
-	if out, err := exec.Command("git", "-C", a.vault.Root, "rev-list", "--count", "HEAD").Output(); err == nil {
-		parts = append(parts, strings.TrimSpace(string(out))+" commits")
-	} else {
-		parts = append(parts, "no commits yet")
+	n, ok := gitCommitCount(a.vault.Root)
+	parts = append(parts, commitState(n, ok))
+	if ok && n == 0 {
+		// The larger of the two durability gaps, and the one a repository
+		// that exists at all is easiest to assume away.
+		rep.Attention = append(rep.Attention, noCommitsAttention(a.vault.Root))
 	}
 	remote, err := gitRemote(a.vault.Root)
 	switch {
@@ -663,11 +693,65 @@ func (a *app) gitDetail(rep *doctorReport) string {
 		// The one durability gap the specification leaves open: local history
 		// protects against a bad edit, not against a dead disk.
 		parts = append(parts, "no remote configured")
-		rep.Attention = append(rep.Attention, "vault has no remote - a disk failure loses it; `git -C "+a.vault.Root+" remote add origin <private repo>` closes the gap")
+		rep.Attention = append(rep.Attention, "vault has no remote - a disk failure loses it; `git -C "+shellArg(a.vault.Root)+" remote add origin <private repo>` closes the gap")
 	default:
 		parts = append(parts, "remote "+remote)
 	}
 	return strings.Join(parts, ", ")
+}
+
+// commitState words a commit count. init and doctor both say it, and they say
+// it the same way: one concept, one phrase, on every screen.
+func commitState(n int, known bool) string {
+	switch {
+	case !known:
+		return "cannot count commits"
+	case n == 0:
+		return "no commits yet"
+	default:
+		return fmt.Sprintf("%d commits", n)
+	}
+}
+
+// noCommitsAttention words the gap an empty repository leaves. init and doctor
+// both raise it, in the same words and naming the same command, because it is
+// the same gap seen from two moments.
+func noCommitsAttention(root string) string {
+	root = shellArg(root)
+	return fmt.Sprintf(
+		"vault has no commits - an empty repository protects nothing; `git -C %s add -A && git -C %s commit -m \"vault\"` starts the history",
+		root, root)
+}
+
+func shellArg(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'"
+}
+
+// gitCommitCount reports how many commits dir's repository holds.
+//
+// ok is false when the question cannot be answered at all - no repository, no
+// git, an unreadable one - because "no commits" and "cannot tell" are
+// different facts and only the first is a gap the user can close. `git init`
+// leaves a repository holding nothing, so this is what separates a vault that
+// is under version control from one that only looks like it.
+func gitCommitCount(dir string) (int, bool) {
+	if _, err := os.Stat(filepath.Join(dir, ".git")); err != nil {
+		return 0, false
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		return 0, false
+	}
+	// --all rather than HEAD: an empty repository has no HEAD to resolve, and
+	// counting zero is the answer here rather than an error to interpret.
+	out, err := exec.Command("git", "-C", dir, "rev-list", "--count", "--all").Output()
+	if err != nil {
+		return 0, false
+	}
+	n, err := strconv.Atoi(strings.TrimSpace(string(out)))
+	if err != nil {
+		return 0, false
+	}
+	return n, true
 }
 
 func gitRemote(dir string) (string, error) {

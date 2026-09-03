@@ -70,8 +70,16 @@ brain-axi setup skill --claude
 brain-axi doctor
 ```
 
-`init` creates `vault/` with its skeleton, its config and its own git repository. It never
-overwrites an existing config, so re-running it is safe.
+`init` creates `vault/` under the working directory with its skeleton, its config and its own git
+repository, so run it from your home directory and the vault is `~/vault`. `--path` puts it
+somewhere else. It never overwrites an existing config, so re-running it is safe.
+
+Every other command finds that vault from anywhere. Resolution is `--vault`, then
+`$BRAIN_AXI_VAULT`, then a walk up from the working directory, then `~/vault` and
+`~/secondbrain/vault`. If no explicit or nearer vault has already settled the resolution, those
+last two are peers, so a machine holding both gets a refusal naming each one rather than a silent
+choice between two brains.
+Set `--vault <path>` or `$BRAIN_AXI_VAULT=<path>` to name the one you mean.
 
 It takes the timezone from your machine and reports the zone it settled on, because that zone is
 what every stored timestamp's UTC offset is written from. Name one yourself with
@@ -79,14 +87,21 @@ what every stored timestamp's UTC offset is written from. Name one yourself with
 whose zone cannot be determined, `init` says so and asks for `--timezone` rather than guessing: a
 wrong offset corrupts every record quietly, and a refusal costs one command.
 
-`setup skill` installs the agent-facing
-skill that teaches your agent when to reach for the brain, how to resolve relative dates, how to
-review and confirm whole-meeting captures, and the post-write echo-back rule. `doctor` tells you
-what is missing, including the one gap worth knowing about:
+`git init` leaves a repository holding nothing, so `init` reports the new one as `initialised, no
+commits yet` and names the commit that starts the history. It never makes that commit for you:
+what goes into your vault's history is your call.
+
+`setup skill` installs the agent-facing skill that teaches your agent when to reach for the brain,
+how to resolve relative dates, how to review and confirm whole-meeting captures, and the post-write
+echo-back rule. It knows `--claude`, `--codex` and `--pi`, installs into every one of those whose
+directory already exists when you name none, and takes `--dir <path>` for anything else. `--pi`
+follows `$PI_CODING_AGENT_DIR` when that is set. `doctor` reports every known agent's copy, so a
+completed installation into one of those directories never looks the same as a missing one, and
+tells you what is missing:
 
 ```
 $ brain-axi doctor
-vault:      /home/you/secondbrain/vault  ok
+vault:      /home/you/vault  ok
 config:     Asia/Bangkok, week starts mon, nudge 14d  ok
 files:      0 parsed, 0 malformed
 links:      all resolved  ok
@@ -95,12 +110,18 @@ recurrence: every series resolves in the next year  ok
 tasks:      none overdue, none past their follow-up horizon  ok
 board:      no board_html configured; `brain-axi board --html <path>` writes one anywhere
 forge:      gh present, glab present; no record is linked to a pull request
-git:        clean, no commits yet, no remote configured
+git:        uncommitted changes, no commits yet, no remote configured
 skill:      /home/you/.claude/skills/secondbrain  installed
 backlog:    no backlog_cmd configured; the dashboard footer omits it
 binary:     v1.0.0
-attention[1]: vault has no remote - a disk failure loses it; `git -C /home/you/secondbrain/vault remote add origin <private repo>` closes the gap
+attention[2]:
+  - vault has no commits - an empty repository protects nothing; `git -C '/home/you/vault' add -A && git -C '/home/you/vault' commit -m "vault"` starts the history
+  - vault has no remote - a disk failure loses it; `git -C '/home/you/vault' remote add origin <private repo>` closes the gap
 ```
+
+Those two are the durability gaps `init` cannot close for you, in the order they matter: local
+history protects against a bad edit, a remote against a dead disk, and neither exists until you
+make it.
 
 ### Capture something
 

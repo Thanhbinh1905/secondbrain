@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -423,6 +424,52 @@ func TestCorruptVaultFailsLoudlyThroughTheCLI(t *testing.T) {
 	}
 	if !strings.Contains(got.Stdout, "parse failed") {
 		t.Errorf("doctor did not report the parse failure:\n%s", got.Stdout)
+	}
+}
+
+func TestDoctorReportsAmbiguousVaultAsAChoice(t *testing.T) {
+	home := t.TempDir()
+	outside := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv(vault.EnvVault, "")
+	t.Setenv(EnvNow, "2026-09-01T09:00")
+	cfg := vault.DefaultConfig()
+	cfg.Timezone = "Asia/Bangkok"
+	first := filepath.Join(home, "vault")
+	second := filepath.Join(home, "secondbrain", "vault")
+	for _, root := range []string{first, second} {
+		if _, err := vault.Init(root, cfg, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var out, errOut bytes.Buffer
+	code := Run([]string{"doctor", "--json"}, Env{
+		Stdin: os.Stdin, Stdout: &out, Stderr: &errOut, Workdir: outside,
+	})
+	if code != exitOK {
+		t.Fatalf("doctor --json exit %d: %s", code, errOut.String())
+	}
+	var rep doctorReport
+	if err := json.Unmarshal(out.Bytes(), &rep); err != nil {
+		t.Fatalf("doctor --json emitted invalid JSON: %v\n%s", err, out.String())
+	}
+	if len(rep.Rows) == 0 || rep.Rows[0].Name != "vault" || rep.Rows[0].Detail != "choice required" {
+		t.Fatalf("vault row = %+v", rep.Rows)
+	}
+	help := strings.Join(rep.Help, "\n")
+	if strings.Contains(help, "brain-axi init") {
+		t.Errorf("ambiguous vault recommends creating another one: %s", help)
+	}
+	for _, want := range []string{"--vault <path>", "$" + vault.EnvVault + "=<path>"} {
+		if !strings.Contains(help, want) {
+			t.Errorf("help does not mention %q: %s", want, help)
+		}
+	}
+	attention := strings.Join(rep.Attention, "\n")
+	for _, want := range []string{first, second} {
+		if !strings.Contains(attention, want) {
+			t.Errorf("attention does not name %q: %s", want, attention)
+		}
 	}
 }
 
@@ -1522,5 +1569,132 @@ func TestInitExistingVaultDoesNotNeedSystemZone(t *testing.T) {
 				t.Errorf("re-init rewrote the config:\n%s", after)
 			}
 		})
+	}
+}
+
+// TestInitDoesNotClaimGitProtectsAnythingItDoesNotYet: `git init` makes a
+// repository with no commits, which protects nothing. Reporting it as
+// "initialised" beside a lone missing-remote warning tells the operator the
+// local side is already safe, so the one thing that would make it safe - the
+// first commit - never gets made. brain-axi does not make that commit itself:
+// committing somebody's notes on their behalf is not this tool's call. It says
+// so instead, in doctor's own words.
+func TestInitDoesNotClaimGitProtectsAnythingItDoesNotYet(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not on PATH")
+	}
+	root := filepath.Join(t.TempDir(), "vault with space")
+	got := invoke(t, root, "2026-09-01T09:00", false, "init", "--path", root)
+	if got.Code != exitOK {
+		t.Fatalf("init: exit %d: %s", got.Code, got.Stderr)
+	}
+	if !strings.Contains(got.Stdout, "no commits yet") {
+		t.Errorf("init did not say the new repository is empty:\n%s", got.Stdout)
+	}
+	// The gap has to be actionable, not merely stated, and it belongs beside
+	// the missing-remote gap rather than buried in the git line.
+	const commandPrefix = "empty repository protects nothing; `"
+	start := strings.Index(got.Stdout, commandPrefix)
+	if start < 0 {
+		t.Fatalf("init did not name the command that closes the gap:\n%s", got.Stdout)
+	}
+	command := got.Stdout[start+len(commandPrefix):]
+	end := strings.Index(command, "` starts the history")
+	if end < 0 {
+		t.Fatalf("init emitted an unterminated recovery command:\n%s", got.Stdout)
+	}
+	command = command[:end]
+	// doctor raises the same gap in the same words: it is the surface the
+	// README points at for what is missing, and an empty repository is the
+	// larger of the two durability gaps it reports.
+	doc := invoke(t, root, "2026-09-01T09:00", false, "doctor")
+	if doc.Code != exitOK {
+		t.Fatalf("doctor: exit %d: %s", doc.Code, doc.Stderr)
+	}
+	if !strings.Contains(doc.Stdout, "no commits yet") {
+		t.Errorf("doctor did not report the empty repository:\n%s", doc.Stdout)
+	}
+	if !strings.Contains(doc.Stdout, "vault has no commits - an empty repository protects nothing") {
+		t.Errorf("doctor did not raise the empty repository as attention:\n%s", doc.Stdout)
+	}
+	if !strings.Contains(doc.Stdout, "git -C '"+root+"' remote add origin <private repo>") {
+		t.Errorf("doctor did not quote the vault path in the remote command:\n%s", doc.Stdout)
+	}
+
+	// The claim is about this repository, so it has to be true of it.
+	out, err := exec.Command("git", "-C", root, "rev-list", "--count", "--all").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.TrimSpace(string(out)); n != "0" {
+		t.Errorf("init made %s commit(s) in the vault; it must never commit for the user", n)
+	}
+	cmd := exec.Command("sh", "-c", command)
+	cmd.Env = append(os.Environ(),
+		"GIT_AUTHOR_NAME=brain-axi test",
+		"GIT_AUTHOR_EMAIL=brain-axi@example.invalid",
+		"GIT_COMMITTER_NAME=brain-axi test",
+		"GIT_COMMITTER_EMAIL=brain-axi@example.invalid",
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("printed recovery command failed: %v: %s\n%s", err, out, command)
+	}
+	out, err = exec.Command("git", "-C", root, "rev-list", "--count", "--all").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.TrimSpace(string(out)); n != "1" {
+		t.Errorf("printed recovery command left %s commits, want 1", n)
+	}
+	// --json carries the same fact, because an agent reads that and not the
+	// rendered attention list.
+	fresh := filepath.Join(t.TempDir(), "vault")
+	got = invoke(t, fresh, "2026-09-01T09:00", false, "init", "--path", fresh, "--json")
+	if got.Code != exitOK {
+		t.Fatalf("init --json: exit %d: %s", got.Code, got.Stderr)
+	}
+	var payload struct {
+		GitInitialised bool `json:"git_initialised"`
+		GitCommits     int  `json:"git_commits"`
+		Known          bool `json:"git_commits_known"`
+	}
+	if err := json.Unmarshal([]byte(got.Stdout), &payload); err != nil {
+		t.Fatalf("init --json: %v:\n%s", err, got.Stdout)
+	}
+	if !payload.GitInitialised {
+		t.Fatalf("init --json did not initialise a repository:\n%s", got.Stdout)
+	}
+	if !payload.Known || payload.GitCommits != 0 {
+		t.Errorf("init --json reported %d commit(s), known=%v", payload.GitCommits, payload.Known)
+	}
+}
+
+func TestInitReportsExistingRepositoryCommitCount(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not on PATH")
+	}
+	root := filepath.Join(t.TempDir(), "vault")
+	got := invoke(t, root, "2026-09-01T09:00", false, "init", "--path", root, "--timezone", "Europe/Lisbon")
+	if got.Code != exitOK {
+		t.Fatalf("init: exit %d: %s", got.Code, got.Stderr)
+	}
+	for i := 1; i <= 3; i++ {
+		path := filepath.Join(root, fmt.Sprintf("commit-%d.txt", i))
+		if err := os.WriteFile(path, []byte(fmt.Sprintf("%d\n", i)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if out, err := exec.Command("git", "-C", root, "add", "-A").CombinedOutput(); err != nil {
+			t.Fatalf("git add: %v: %s", err, out)
+		}
+		if out, err := exec.Command("git", "-C", root, "-c", "user.name=brain-axi test", "-c", "user.email=brain-axi@example.invalid", "commit", "--quiet", "-m", fmt.Sprintf("commit %d", i)).CombinedOutput(); err != nil {
+			t.Fatalf("git commit: %v: %s", err, out)
+		}
+	}
+	got = invoke(t, root, "2026-09-01T09:00", false, "init", "--path", root)
+	if got.Code != exitOK {
+		t.Fatalf("re-init: exit %d: %s", got.Code, got.Stderr)
+	}
+	if !strings.Contains(got.Stdout, "already a git repository, 3 commits") {
+		t.Errorf("re-init did not report the existing commit count:\n%s", got.Stdout)
 	}
 }

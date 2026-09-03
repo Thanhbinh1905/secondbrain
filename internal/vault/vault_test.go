@@ -159,8 +159,9 @@ func TestDuplicateIDIsReportedNotGuessed(t *testing.T) {
 }
 
 func TestVaultNotFoundNamesResolutionOrder(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv(EnvVault, "")
+	// The home fallbacks are part of resolution, so the developer's own vault
+	// has to be out of reach for this to be testing anything.
+	_, dir := homeAt(t)
 	_, err := Open("", dir)
 	if err == nil {
 		t.Fatal("a vault was found where none exists")
@@ -818,5 +819,111 @@ func TestWalkIsMemoisedForOneInvocationAndDroppedByAWrite(t *testing.T) {
 	}
 	if len(records) != 1 {
 		t.Errorf("a fresh vault saw %d records, want 1", len(records))
+	}
+}
+
+// homeAt points os.UserHomeDir at a temporary directory and returns a working
+// directory that is deliberately outside it, because the bug these tests cover
+// only appears when the walk up from the working directory never reaches home.
+func homeAt(t *testing.T) (home, outside string) {
+	t.Helper()
+	home = t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv(EnvVault, "")
+	return home, t.TempDir()
+}
+
+// TestOpenFindsTheVaultInitCreatesInTheHomeDirectory: `brain-axi init` run from
+// the home directory - which is what the README documents - writes ~/vault, so
+// discovery has to look there. Before this was a fallback, the vault was found
+// from anywhere under $HOME by the walk up and nowhere else, so it vanished the
+// moment the user changed directory into a project.
+func TestOpenFindsTheVaultInitCreatesInTheHomeDirectory(t *testing.T) {
+	home, outside := homeAt(t)
+	root := filepath.Join(home, "vault")
+	if _, err := Init(root, testConfig(), false); err != nil {
+		t.Fatal(err)
+	}
+	v, err := Open("", outside)
+	if err != nil {
+		t.Fatalf("Open from %s: %v", outside, err)
+	}
+	if mustEval(t, v.Root) != mustEval(t, root) {
+		t.Errorf("resolved %s, want %s", v.Root, root)
+	}
+}
+
+// TestTwoHomeVaultsAreRefusedRatherThanGuessed: the two home fallbacks are
+// peers with nothing to order them by, so picking one would write notes into
+// whichever brain sorted first. This mirrors timeref.Zone.Normalise, which
+// refuses an ambiguous local time naming every reading it could mean.
+func TestTwoHomeVaultsAreRefusedRatherThanGuessed(t *testing.T) {
+	home, outside := homeAt(t)
+	first := filepath.Join(home, "vault")
+	second := filepath.Join(home, "secondbrain", "vault")
+	for _, root := range []string{first, second} {
+		if _, err := Init(root, testConfig(), false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	v, err := Open("", outside)
+	if err == nil {
+		t.Fatalf("picked %s instead of refusing", v.Root)
+	}
+	amb, ok := err.(*AmbiguousError)
+	if !ok {
+		t.Fatalf("got %T: %v", err, err)
+	}
+	if len(amb.Candidates) != 2 {
+		t.Errorf("reported %d candidates: %v", len(amb.Candidates), amb.Candidates)
+	}
+	msg := err.Error()
+	// Every candidate and both ways out have to be named, or the user is left
+	// to guess exactly where the tool refused to.
+	for _, want := range []string{first, second, EnvVault, "--vault"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("message does not name %q:\n%s", want, msg)
+		}
+	}
+}
+
+// TestAnEarlierResolutionStepEndsTheAmbiguity: the refusal is the last resort,
+// not a veto. Naming a vault is how the user resolves it, so both ways of
+// naming one have to still work while both home vaults exist.
+func TestAnEarlierResolutionStepEndsTheAmbiguity(t *testing.T) {
+	home, outside := homeAt(t)
+	first := filepath.Join(home, "vault")
+	second := filepath.Join(home, "secondbrain", "vault")
+	for _, root := range []string{first, second} {
+		if _, err := Init(root, testConfig(), false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv(EnvVault, second)
+	v, err := Open("", outside)
+	if err != nil {
+		t.Fatalf("$%s did not settle it: %v", EnvVault, err)
+	}
+	if mustEval(t, v.Root) != mustEval(t, second) {
+		t.Errorf("$%s resolved %s, want %s", EnvVault, v.Root, second)
+	}
+	t.Setenv(EnvVault, "")
+	if v, err = Open(first, outside); err != nil {
+		t.Fatalf("--vault did not settle it: %v", err)
+	}
+	if mustEval(t, v.Root) != mustEval(t, first) {
+		t.Errorf("--vault resolved %s, want %s", v.Root, first)
+	}
+	// A vault on the walk up is nearer than either home fallback, and
+	// proximity is what orders that tier, so it settles it too.
+	near := filepath.Join(outside, "vault")
+	if _, err := Init(near, testConfig(), false); err != nil {
+		t.Fatal(err)
+	}
+	if v, err = Open("", outside); err != nil {
+		t.Fatalf("a vault beside the working directory did not settle it: %v", err)
+	}
+	if mustEval(t, v.Root) != mustEval(t, near) {
+		t.Errorf("resolved %s, want %s", v.Root, near)
 	}
 }

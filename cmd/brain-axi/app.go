@@ -49,7 +49,7 @@ type app struct {
 // boolFlags take no value.
 var boolFlags = map[string]bool{
 	"json": true, "help": true, "version": true, "yes": true,
-	"claude": true, "codex": true, "no-git": true, "check": true,
+	"claude": true, "codex": true, "pi": true, "no-git": true, "check": true,
 	"all": true,
 	// due's three categories, each independently togglable. None given means
 	// every category, so the bare command is the whole question.
