@@ -705,6 +705,7 @@ Exit codes are part of the contract an agent scripts against:
 | Failure | Behaviour |
 | --- | --- |
 | Vault not found | Exit non-zero naming the resolution order tried. Never silently create a vault. |
+| More than one home vault | Exit non-zero naming every candidate and both ways to select one. Never guess. |
 | Malformed frontmatter | `path:line: reason`, non-zero exit. The file is neither skipped nor repaired. |
 | Unknown status value | Rejected against the closed vocabulary, listing the valid values. |
 | Naive timestamp on read | Rejected as a corrupt record, not silently assumed to be vault-local. Silent assumption is how a meeting ends up an hour off. |
@@ -955,7 +956,7 @@ Every FR and NFR, and where it lives.
 
 | ID | Where |
 | --- | --- |
-| FR-1 | `internal/vault/init.go` `Init`; `cmd/brain-axi/lifecycle.go` `cmdInit` |
+| FR-1 | `internal/vault/init.go` `Init`; `internal/vault/config.go` `Open`; `cmd/brain-axi/lifecycle.go` `cmdInit` |
 | FR-2 | `internal/vault/init.go` `BuildEvent`/`BuildIdea`/`BuildNote`/`BuildPerson`, `AppendNote`; `cmd/brain-axi/capture.go` |
 | FR-3 | `internal/timeref/timeref.go` `Zone.Normalise`, `ParseStored` |
 | FR-4 | `internal/query/query.go` `Agenda`, `Today`, `Week`; `cmd/brain-axi/recall.go` |

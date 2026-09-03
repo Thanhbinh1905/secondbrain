@@ -79,6 +79,7 @@ Every other command finds that vault from anywhere. Resolution is `--vault`, the
 `~/secondbrain/vault`. If no explicit or nearer vault has already settled the resolution, those
 last two are peers, so a machine holding both gets a refusal naming each one rather than a silent
 choice between two brains.
+Set `--vault <path>` or `$BRAIN_AXI_VAULT=<path>` to name the one you mean.
 
 It takes the timezone from your machine and reports the zone it settled on, because that zone is
 what every stored timestamp's UTC offset is written from. Name one yourself with
