@@ -262,10 +262,27 @@ func ResolutionOrder(explicit, workdir string) []string {
 		out = append(out, fmt.Sprintf("$%s (unset)", EnvVault))
 	}
 	out = append(out, fmt.Sprintf("%s/%s and vault/%s/%s, walking up from %s", BrainDir, ConfigName, BrainDir, ConfigName, workdir))
-	if home, err := os.UserHomeDir(); err == nil {
-		out = append(out, filepath.Join(home, "secondbrain", "vault"))
-	}
+	out = append(out, homeCandidates()...)
 	return out
+}
+
+// homeCandidates are the default locations under the home directory, in the
+// order ResolutionOrder reports them.
+//
+// The first is where `brain-axi init` run from the home directory puts a vault,
+// which is what the README documents; the second is the original default. They
+// are peers rather than a precedence: unlike the walk up from the working
+// directory, neither is nearer to anything, so Open refuses when both exist
+// instead of choosing one.
+func homeCandidates() []string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	return []string{
+		filepath.Join(home, "vault"),
+		filepath.Join(home, "secondbrain", "vault"),
+	}
 }
 
 // NotFoundError reports that no vault was found, naming everything tried.
@@ -281,6 +298,29 @@ func (e *NotFoundError) Error() string {
 		sb.WriteString(t)
 	}
 	sb.WriteString("\nrun `brain-axi init` to create one; a vault is never created implicitly")
+	return sb.String()
+}
+
+// AmbiguousError reports that more than one of the default home locations
+// holds a vault.
+//
+// Nothing orders those locations against each other, so choosing would mean
+// reading and writing somebody's notes in whichever brain happened to sort
+// first, and the mistake would only surface once the other one had gone quiet.
+// Naming every candidate and both ways out costs one command; guessing is not
+// recoverable from the user's side.
+type AmbiguousError struct {
+	Candidates []string
+}
+
+func (e *AmbiguousError) Error() string {
+	var sb strings.Builder
+	sb.WriteString("more than one vault in the default locations, and nothing orders them:")
+	for _, c := range e.Candidates {
+		sb.WriteString("\n  - ")
+		sb.WriteString(c)
+	}
+	fmt.Fprintf(&sb, "\nname the one you mean with `--vault <path>` or $%s=<path>", EnvVault)
 	return sb.String()
 }
 
@@ -323,17 +363,38 @@ func isVaultRoot(dir string) bool {
 
 // Open finds and opens a vault. explicit comes from --vault and wins when set;
 // otherwise the environment, then a walk up from workdir, then the default
-// location under the home directory.
+// locations under the home directory, which are refused when more than one of
+// them exists.
 func Open(explicit, workdir string) (*Vault, error) {
-	tried := ResolutionOrder(explicit, workdir)
 	for _, candidate := range openCandidates(explicit, workdir) {
 		if isVaultRoot(candidate) {
 			return openAt(candidate)
 		}
 	}
-	return nil, &NotFoundError{Tried: tried}
+	// The home fallbacks are reached only once every ordered step above has
+	// missed, and they are peers, so more than one of them is an ambiguity
+	// rather than a precedence question. This mirrors timeref.Zone.Normalise,
+	// which refuses an ambiguous local time naming every reading it could
+	// mean instead of taking one of them.
+	var found []string
+	for _, candidate := range homeCandidates() {
+		if isVaultRoot(candidate) {
+			found = append(found, candidate)
+		}
+	}
+	switch len(found) {
+	case 0:
+		return nil, &NotFoundError{Tried: ResolutionOrder(explicit, workdir)}
+	case 1:
+		return openAt(found[0])
+	default:
+		return nil, &AmbiguousError{Candidates: found}
+	}
 }
 
+// openCandidates are the ordered resolution steps: the ones where an earlier
+// hit genuinely outranks a later one. The home fallbacks are not among them,
+// because they have no such order.
 func openCandidates(explicit, workdir string) []string {
 	var out []string
 	add := func(p string) {
@@ -360,9 +421,6 @@ func openCandidates(explicit, workdir string) []string {
 			break
 		}
 		dir = parent
-	}
-	if home, err := os.UserHomeDir(); err == nil {
-		add(filepath.Join(home, "secondbrain", "vault"))
 	}
 	return out
 }

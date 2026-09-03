@@ -310,7 +310,7 @@ read back: brain-axi holds no supervisor state and stays fully usable with no su
 	"export": "usage: brain-axi export ics [--out <path>] [--from <date>] [--to <date>]\nOne-way iCalendar export of events. Import and sync are out of scope.\n",
 	"brief":  "usage: brain-axi brief [--days <n>] [--json]\nThe brain section for a session brief: today, what is due, what has gone stale, what nobody has checked.\n",
 	"init":   "usage: brain-axi init [--path <dir>] [--timezone <zone>] [--week-starts <day>] [--nudge-after <span>] [--no-git]\nCreates the vault skeleton. Never overwrites an existing config.\n--timezone defaults to this machine's zone, and init refuses rather than guessing one it cannot determine; every stored timestamp carries that zone's offset.\n",
-	"setup":  "usage: brain-axi setup skill [--claude] [--codex] [--dir <path>]\nInstalls the agent-facing skill.\n",
+	"setup":  "usage: brain-axi setup skill [--claude] [--codex] [--pi] [--dir <path>]\nInstalls the agent-facing skill.\n",
 	"doctor": "usage: brain-axi doctor [--json]\nReports the vault, the config, the parse state, tasks, forge reach, git, the skill and the binary.\n",
 }
 

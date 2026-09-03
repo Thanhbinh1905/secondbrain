@@ -120,6 +120,20 @@ refactor.
   answer gets `ErrNoSystemZone`, which names `--timezone`. `vault.DefaultConfig` deliberately
   carries no timezone at all, and `vault.Init` refuses an empty one. Never add a fallback zone.
 
+- **The two home fallbacks are peers, and a tie is refused.** `init` writes `vault/` under the
+  working directory, so the documented run from `$HOME` produces `~/vault`; discovery therefore
+  ends with `~/vault` *and* `~/secondbrain/vault`. Steps 1-3 of resolution are ordered and an
+  earlier hit wins, but nothing ranks those two, so `vault.Open` refuses when both exist and names
+  each candidate plus `--vault`/`$BRAIN_AXI_VAULT`. The refusal is in `Open`, not per command, so
+  reads and writes resolve identically - a vault that moves with the subcommand is worse than
+  either answer. Do not add a tie-break; `AmbiguousError` mirrors `timeref.Zone.Normalise`.
+
+- **`init` creates a repository and never a commit.** `git init` leaves history empty, so `init`
+  reports `initialised, no commits yet` and both `init` and `doctor` raise the gap through
+  `noCommitsAttention`, naming the command that closes it. Committing the user's notes for them is
+  not this tool's call. `commitState` and `gitCommitCount` are the single wording and the single
+  query; an unanswerable count is `known: false`, never zero.
+
 - **Every command walks every record directory.** `vault.Walk` has no scoped mode on purpose:
   scoping `today` to `events/` saves twenty of NFR-1's hundred milliseconds and lets `today` exit
   zero on a vault with a broken idea in it. `TestCorruptionAnywhereFailsEveryReadCommand` locks
@@ -197,6 +211,14 @@ out of a list of its own.
 directory and a worktree has a file. Anything that depends on `vcs.revision` or on a synthesised
 pseudo-version has to be checked in a real clone; a `go build` in this repository's usual worktree
 reports `dev`, and that is the environment, not a regression.
+
+**An agent's skills directory is resolved the way that agent resolves it.** `internal/skill`'s
+`knownAgents` holds a `root func(home string) string` per agent rather than a home-relative path,
+because pi's directory sits under an agent dir that `$PI_CODING_AGENT_DIR` moves wholesale (and
+whose leading `~` pi expands). Resolving it any other way installs a skill the agent never reads
+while `doctor` reports it as present, which is indistinguishable from the bug. Adding an agent
+means a `Choice` field, a `Choice.wants` case, a `boolFlags` entry in `cmd/brain-axi/app.go` and
+the `setup` usage line; `TestEveryKnownAgentIsReachable` catches the one that is silent.
 
 **`skills/secondbrain/SKILL.md` is embedded from where it lives** (`skills/embed.go`), and
 `templates/board.html` and `templates/recap.html` from `templates/embed.go`, for the same reason.

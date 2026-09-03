@@ -25,9 +25,27 @@ const Name = "secondbrain"
 type Choice struct {
 	Claude bool
 	Codex  bool
+	Pi     bool
 	// Dir installs into an explicit skills directory.
 	Dir string
 }
+
+// wants reports whether the choice named this agent.
+func (c Choice) wants(agent string) bool {
+	switch agent {
+	case "claude":
+		return c.Claude
+	case "codex":
+		return c.Codex
+	case "pi":
+		return c.Pi
+	}
+	return false
+}
+
+// namedAny reports whether the choice named any agent at all. Naming none is
+// what turns Targets into auto-detection.
+func (c Choice) namedAny() bool { return c.Claude || c.Codex || c.Pi }
 
 // Target is one place the skill will be written.
 type Target struct {
@@ -37,14 +55,59 @@ type Target struct {
 	Root string
 }
 
-// knownAgents are the agent skill directories this tool looks for, relative to
-// the home directory.
+// EnvPiAgentDir moves pi's agent directory, and with it the skills directory
+// underneath it. pi reads it on every run, so a skill written to the default
+// path while it is set lands somewhere pi never looks.
+const EnvPiAgentDir = "PI_CODING_AGENT_DIR"
+
+// knownAgents are the agent skill directories this tool looks for.
+//
+// Each agent resolves its own user-scope skills directory from the home
+// directory, rather than declaring a path relative to it, because pi's is not
+// expressible that way: it lives under an agent directory that an environment
+// variable can move wholesale.
 var knownAgents = []struct {
 	agent string
-	rel   string
+	root  func(home string) string
 }{
-	{"claude", filepath.Join(".claude", "skills")},
-	{"codex", filepath.Join(".codex", "skills")},
+	{"claude", func(home string) string { return filepath.Join(home, ".claude", "skills") }},
+	{"codex", func(home string) string { return filepath.Join(home, ".codex", "skills") }},
+	{"pi", func(home string) string { return filepath.Join(piAgentDir(home), "skills") }},
+}
+
+// joinWords lists items as prose: "a and b", "a, b and c". A conjunction
+// between every pair reads as a list of two however long it gets.
+func joinWords(items []string, conj string) string {
+	switch len(items) {
+	case 0:
+		return ""
+	case 1:
+		return items[0]
+	}
+	last := len(items) - 1
+	return strings.Join(items[:last], ", ") + " " + conj + " " + items[last]
+}
+
+// piAgentDir is pi's agent directory: $PI_CODING_AGENT_DIR when set, and
+// ~/.pi/agent otherwise.
+//
+// A leading ~ is expanded because pi expands it too, and resolving this path
+// differently from the agent that reads it is the whole defect: the skill
+// would land in a directory literally named "~", pi would never see it, and
+// doctor would report it as installed. This is vault.ExpandHome's rule, kept
+// here rather than reached for so that installing a skill does not depend on
+// the vault package.
+func piAgentDir(home string) string {
+	dir := strings.TrimSpace(os.Getenv(EnvPiAgentDir))
+	switch {
+	case dir == "":
+		return filepath.Join(home, ".pi", "agent")
+	case dir == "~":
+		return home
+	case strings.HasPrefix(dir, "~"+string(os.PathSeparator)):
+		return filepath.Join(home, dir[2:])
+	}
+	return dir
 }
 
 // Targets resolves a choice into destinations. With nothing named, it installs
@@ -64,13 +127,12 @@ func Targets(c Choice) ([]Target, error) {
 	}
 	var out []Target
 	for _, a := range knownAgents {
-		asked := (a.agent == "claude" && c.Claude) || (a.agent == "codex" && c.Codex)
-		root := filepath.Join(home, a.rel)
-		if asked {
+		root := a.root(home)
+		if c.wants(a.agent) {
 			out = append(out, Target{Agent: a.agent, Root: root})
 			continue
 		}
-		if c.Claude || c.Codex {
+		if c.namedAny() {
 			continue
 		}
 		if st, err := os.Stat(root); err == nil && st.IsDir() {
@@ -81,10 +143,11 @@ func Targets(c Choice) ([]Target, error) {
 		var names, dirs []string
 		for _, a := range knownAgents {
 			names = append(names, "--"+a.agent)
-			dirs = append(dirs, filepath.Join(home, a.rel))
+			dirs = append(dirs, a.root(home))
 		}
-		return nil, fmt.Errorf("no agent skills directory found (looked in %s); name one with %s or --dir <path>",
-			strings.Join(dirs, " and "), strings.Join(names, " or "))
+		names = append(names, "--dir <path>")
+		return nil, fmt.Errorf("no agent skills directory found (looked in %s); name one with %s",
+			joinWords(dirs, "and"), joinWords(names, "or"))
 	}
 	return out, nil
 }
@@ -178,7 +241,7 @@ func Installed() []Found {
 	}
 	var out []Found
 	for _, a := range knownAgents {
-		path := filepath.Join(home, a.rel, Name)
+		path := filepath.Join(a.root(home), Name)
 		data, err := os.ReadFile(filepath.Join(path, "SKILL.md"))
 		if err != nil {
 			continue

@@ -722,7 +722,18 @@ In order, and reported verbatim when nothing is found:
 1. `--vault <path>`
 2. `$BRAIN_AXI_VAULT`
 3. `.brain/config.yml` or `vault/.brain/config.yml`, walking up from the working directory
-4. `~/secondbrain/vault`
+4. `~/vault` and `~/secondbrain/vault`
+
+`init` writes `vault/` under the working directory, so step 4 has to include `~/vault`: run from the home directory, which is what the README documents, that is where the vault is.
+
+Steps 1 to 3 are ordered, and an earlier hit outranks a later one.
+Step 4 is not ordered, because nothing orders it: the walk up ranks by proximity to the working directory, and neither home location is nearer to anything.
+So a machine holding both is an ambiguity rather than a precedence question, and it is refused, naming every candidate and both ways to settle it.
+Picking one would read and write somebody's notes in whichever brain sorted first, and the mistake would only surface once the other had gone quiet.
+This is the shape `timeref.Zone.Normalise` already uses for an ambiguous local time.
+
+The refusal is in `vault.Open`, so it is the same for a command that reads and a command that writes.
+Answering `today` out of the wrong brain is the failure that started this, and a resolution that changed with the subcommand would be worse than either answer.
 
 A vault is never created implicitly.
 
@@ -834,6 +845,10 @@ Dates the tool prints are ISO (`2006-01-02`), because a day/month/year ordering 
 
 A tracked skill in `skills/secondbrain/`, installed by `brain-axi setup skill`.
 The Markdown in that directory is the only copy: it is embedded into the binary from where it lives, so `setup skill` cannot install a version that disagrees with the tool it came from.
+
+`--claude`, `--codex` and `--pi` are the known agents, `--dir <path>` covers anything else, and naming none installs into every known directory that already exists.
+Each agent resolves its own skills directory rather than declaring one relative to the home directory, because pi's is not expressible that way: it sits under an agent directory that `$PI_CODING_AGENT_DIR` moves wholesale.
+`doctor` reports every known agent's copy, so an installation it cannot see never looks the same as a missing one.
 
 The skill teaches the agent five things and nothing more:
 

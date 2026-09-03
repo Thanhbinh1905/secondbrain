@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -1522,5 +1523,74 @@ func TestInitExistingVaultDoesNotNeedSystemZone(t *testing.T) {
 				t.Errorf("re-init rewrote the config:\n%s", after)
 			}
 		})
+	}
+}
+
+// TestInitDoesNotClaimGitProtectsAnythingItDoesNotYet: `git init` makes a
+// repository with no commits, which protects nothing. Reporting it as
+// "initialised" beside a lone missing-remote warning tells the operator the
+// local side is already safe, so the one thing that would make it safe - the
+// first commit - never gets made. brain-axi does not make that commit itself:
+// committing somebody's notes on their behalf is not this tool's call. It says
+// so instead, in doctor's own words.
+func TestInitDoesNotClaimGitProtectsAnythingItDoesNotYet(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not on PATH")
+	}
+	root := filepath.Join(t.TempDir(), "vault")
+	got := invoke(t, root, "2026-09-01T09:00", false, "init", "--path", root)
+	if got.Code != exitOK {
+		t.Fatalf("init: exit %d: %s", got.Code, got.Stderr)
+	}
+	if !strings.Contains(got.Stdout, "no commits yet") {
+		t.Errorf("init did not say the new repository is empty:\n%s", got.Stdout)
+	}
+	// The gap has to be actionable, not merely stated, and it belongs beside
+	// the missing-remote gap rather than buried in the git line.
+	if !strings.Contains(got.Stdout, "git -C "+root+" add -A") {
+		t.Errorf("init did not name the command that closes the gap:\n%s", got.Stdout)
+	}
+	// doctor raises the same gap in the same words: it is the surface the
+	// README points at for what is missing, and an empty repository is the
+	// larger of the two durability gaps it reports.
+	doc := invoke(t, root, "2026-09-01T09:00", false, "doctor")
+	if doc.Code != exitOK {
+		t.Fatalf("doctor: exit %d: %s", doc.Code, doc.Stderr)
+	}
+	if !strings.Contains(doc.Stdout, "no commits yet") {
+		t.Errorf("doctor did not report the empty repository:\n%s", doc.Stdout)
+	}
+	if !strings.Contains(doc.Stdout, "vault has no commits - an empty repository protects nothing") {
+		t.Errorf("doctor did not raise the empty repository as attention:\n%s", doc.Stdout)
+	}
+
+	// The claim is about this repository, so it has to be true of it.
+	out, err := exec.Command("git", "-C", root, "rev-list", "--count", "--all").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.TrimSpace(string(out)); n != "0" {
+		t.Errorf("init made %s commit(s) in the vault; it must never commit for the user", n)
+	}
+	// --json carries the same fact, because an agent reads that and not the
+	// rendered attention list.
+	fresh := filepath.Join(t.TempDir(), "vault")
+	got = invoke(t, fresh, "2026-09-01T09:00", false, "init", "--path", fresh, "--json")
+	if got.Code != exitOK {
+		t.Fatalf("init --json: exit %d: %s", got.Code, got.Stderr)
+	}
+	var payload struct {
+		GitInitialised bool `json:"git_initialised"`
+		GitCommits     int  `json:"git_commits"`
+		Known          bool `json:"git_commits_known"`
+	}
+	if err := json.Unmarshal([]byte(got.Stdout), &payload); err != nil {
+		t.Fatalf("init --json: %v:\n%s", err, got.Stdout)
+	}
+	if !payload.GitInitialised {
+		t.Fatalf("init --json did not initialise a repository:\n%s", got.Stdout)
+	}
+	if !payload.Known || payload.GitCommits != 0 {
+		t.Errorf("init --json reported %d commit(s), known=%v", payload.GitCommits, payload.Known)
 	}
 }

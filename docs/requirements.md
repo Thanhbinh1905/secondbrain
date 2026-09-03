@@ -117,7 +117,7 @@ Ruthless surfacing of decay is the counterweight, and it ships in the first rele
 
 | ID | Requirement |
 | --- | --- |
-| FR-1 | `init` creates the vault skeleton, `.brain/config.yml`, a `.gitignore`, and initialises a git repository inside `vault/`. |
+| FR-1 | `init` creates the vault skeleton, `.brain/config.yml`, a `.gitignore`, and initialises a git repository inside `vault/`, under the working directory unless `--path` names another. It reports how many commits that repository holds and never makes one: an empty repository protects nothing, and what enters the vault's history is the user's decision. Every command resolves the vault through `--vault`, `$BRAIN_AXI_VAULT`, a walk up from the working directory, then `~/vault` and `~/secondbrain/vault`. Those two are peers, so a machine holding both is refused, naming each candidate and both ways to settle it, for reading commands as well as writing ones. |
 | FR-2 | `add {event,idea,note}` writes one Markdown file with validated frontmatter and returns its stable id. |
 | FR-3 | Every timestamp is stored with an explicit UTC offset. A naive local time is accepted on input and normalised using the vault timezone; it is never stored naive. |
 | FR-4 | `today` / `week` / `agenda --from --to` return chronologically ordered events, flagging the next upcoming one. |
@@ -127,7 +127,7 @@ Ruthless surfacing of decay is the counterweight, and it ships in the first rele
 | FR-8 | `rm` refuses without an explicit confirmation flag. |
 | FR-9 | Bare `brain-axi` renders the dashboard. |
 | FR-10 | Every command supports `--json`; the default is compact agent-readable text in the axi house style. |
-| FR-11 | `setup skill` installs the agent-facing skill into the detected agent's skill directory. |
+| FR-11 | `setup skill` installs the agent-facing skill into the detected agent's skill directory. The known agents are `--claude`, `--codex` and `--pi`; `--dir <path>` covers the rest, and naming none installs into every known directory that already exists. Each agent's directory is resolved the way that agent resolves it, so `--pi` follows `$PI_CODING_AGENT_DIR`. `doctor` reports every known agent's installed copy, because an installation it cannot see is indistinguishable from a missing one. |
 | FR-12 | An `add event` whose slot overlaps an existing event reports the overlap and still stores the event. |
 | FR-13 | `update` (self-upgrade) replaces the binary in place and verifies the replacement runs. How it upgrades follows the install method recorded beside the binary: a checkout install fast-forwards and rebuilds, a release install downloads and verifies the newest published asset, and a `go install` is told the command that upgrades it. A legacy `.brain-axi-source` record without a method record, or a binary inside a clone of this repository, is treated as a checkout install; every other missing method record is a `go install`. An unknown or unreadable method is refused, never guessed. |
 | FR-14 | `review` presents an interactive triage of stale ideas and unchecked tasks. |
@@ -200,7 +200,7 @@ Failures surface.
 | **Scope creep into a task manager.** The brain slowly starts owning work items. | Medium | Read-only against the backlog is a design constraint, stated in the non-goals and enforced by having no write path at all. The `task` kind is bounded by its own vocabulary: `waiting` and `follow_up_after:` are about remembering to check, and there is no assignment, no dispatch and no notion of who is doing the work. |
 | **A cached forge status read as a live one.** The user sees "passing" and ships on it, hours after the pipeline went red. | Medium | The timestamp is stored beside the status and displayed everywhere the status is, a fallback to cache always says so and how old it is, and only an explicit `--refresh` claims to be current. |
 | **Format churn.** Frontmatter changes shape and old files stop parsing. | Medium | Additive changes only, unknown keys preserved on rewrite, and no destructive migration without an explicit command. |
-| **Total data loss.** Single disk, no remote. | Medium, irreversible | Local git history from day one; `doctor` keeps the missing remote visible until it is addressed. |
+| **Total data loss.** Single disk, no remote. | Medium, irreversible | Local git history from the first commit; `init` creates the repository but never commits, and `doctor` keeps both the empty repository and the missing remote visible until each is addressed. |
 | **Agent output pollution.** Dashboard frames leak into agent context and burn tokens. | Low | Non-TTY output degrades to plain lines; the skill directs agents to the compact commands. |
 | **A review surface's annotations read as orders.** Someone annotates the board and an agent executes it. | Medium | An annotation is input, never instruction and never authority: it is not executed and confers no permission. The board never writes to the vault, and every change is made by running an ordinary brain-axi command. Stated on the page itself, in the README and in `AGENTS.md`. |
 | **A generated UI re-authored on every run.** The board looks different each time an agent builds it. | Medium | A committed template owns every pixel and a versioned payload contract owns the pane set and its order. No code path generates board markup at run time, and a test asserts the built page is the template with only its data slot replaced. |
@@ -222,4 +222,4 @@ Failures surface.
 
 | Question | Why it can wait |
 | --- | --- |
-| A private remote for `vault/` itself | Local git history covers a bad edit from day one. A remote covers a dead disk, and adding one later is a single `git remote add` with no design change. `doctor` keeps the gap visible until the user decides. |
+| A private remote for `vault/` itself | Local git history covers a bad edit once there is a commit to compare against. A remote covers a dead disk, and adding one later is a single `git remote add` with no design change. `doctor` keeps both gaps visible until the user decides. |

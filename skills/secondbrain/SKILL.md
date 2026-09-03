@@ -341,6 +341,9 @@ rather than retrying:
   transition. Ask which instant was meant and pass an explicit offset.
 - `no vault found` means the vault has not been created. `brain-axi init` creates it; the tool never
   creates one implicitly.
+- `more than one vault in the default locations` means both `~/vault` and `~/secondbrain/vault`
+  exist and nothing ranks them. Do not pick one. Show both paths and ask which is the brain, then
+  pass it as `--vault <path>` for the rest of the session.
 - `meeting.yml:8: delegated: ...` means the batch file is wrong on that line. Nothing was stored.
   Fix that one line and re-run the same file.
 - `glab failed: ...` or `gh is not on PATH ...` means the forge could not be read. Report exactly
