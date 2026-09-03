@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -408,9 +409,16 @@ func (r *doctorReport) add(name, detail string, ok bool) {
 func (a *app) diagnose() doctorReport {
 	rep := doctorReport{}
 	if err := a.openVault(); err != nil {
-		rep.add("vault", "not found", false)
+		detail := "not found"
+		help := "Run `brain-axi init` to create a vault"
+		var ambiguous *vault.AmbiguousError
+		if errors.As(err, &ambiguous) {
+			detail = "choice required"
+			help = "Name the one you mean with `--vault <path>` or $BRAIN_AXI_VAULT=<path>"
+		}
+		rep.add("vault", detail, false)
 		rep.Attention = append(rep.Attention, strings.ReplaceAll(err.Error(), "\n", "; "))
-		rep.Help = append(rep.Help, "Run `brain-axi init` to create a vault")
+		rep.Help = append(rep.Help, help)
 		rep.add("binary", buildVersion, true)
 		rep.Fatal = "no vault to check"
 		return rep

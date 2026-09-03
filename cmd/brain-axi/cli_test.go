@@ -427,6 +427,52 @@ func TestCorruptVaultFailsLoudlyThroughTheCLI(t *testing.T) {
 	}
 }
 
+func TestDoctorReportsAmbiguousVaultAsAChoice(t *testing.T) {
+	home := t.TempDir()
+	outside := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv(vault.EnvVault, "")
+	t.Setenv(EnvNow, "2026-09-01T09:00")
+	cfg := vault.DefaultConfig()
+	cfg.Timezone = "Asia/Bangkok"
+	first := filepath.Join(home, "vault")
+	second := filepath.Join(home, "secondbrain", "vault")
+	for _, root := range []string{first, second} {
+		if _, err := vault.Init(root, cfg, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var out, errOut bytes.Buffer
+	code := Run([]string{"doctor", "--json"}, Env{
+		Stdin: os.Stdin, Stdout: &out, Stderr: &errOut, Workdir: outside,
+	})
+	if code != exitOK {
+		t.Fatalf("doctor --json exit %d: %s", code, errOut.String())
+	}
+	var rep doctorReport
+	if err := json.Unmarshal(out.Bytes(), &rep); err != nil {
+		t.Fatalf("doctor --json emitted invalid JSON: %v\n%s", err, out.String())
+	}
+	if len(rep.Rows) == 0 || rep.Rows[0].Name != "vault" || rep.Rows[0].Detail != "choice required" {
+		t.Fatalf("vault row = %+v", rep.Rows)
+	}
+	help := strings.Join(rep.Help, "\n")
+	if strings.Contains(help, "brain-axi init") {
+		t.Errorf("ambiguous vault recommends creating another one: %s", help)
+	}
+	for _, want := range []string{"--vault <path>", "$" + vault.EnvVault + "=<path>"} {
+		if !strings.Contains(help, want) {
+			t.Errorf("help does not mention %q: %s", want, help)
+		}
+	}
+	attention := strings.Join(rep.Attention, "\n")
+	for _, want := range []string{first, second} {
+		if !strings.Contains(attention, want) {
+			t.Errorf("attention does not name %q: %s", want, attention)
+		}
+	}
+}
+
 // TestCorruptionAnywhereFailsEveryReadCommand: a broken idea must stop `today`
 // just as surely as it stops `ideas`. No command holds a partial view of the
 // vault, which is why no query scopes its walk.
@@ -1547,10 +1593,17 @@ func TestInitDoesNotClaimGitProtectsAnythingItDoesNotYet(t *testing.T) {
 	}
 	// The gap has to be actionable, not merely stated, and it belongs beside
 	// the missing-remote gap rather than buried in the git line.
-	quotedRoot := shellArg(root)
-	if !strings.Contains(got.Stdout, "git -C "+quotedRoot+" add -A") {
-		t.Errorf("init did not name the command that closes the gap:\n%s", got.Stdout)
+	const commandPrefix = "empty repository protects nothing; `"
+	start := strings.Index(got.Stdout, commandPrefix)
+	if start < 0 {
+		t.Fatalf("init did not name the command that closes the gap:\n%s", got.Stdout)
 	}
+	command := got.Stdout[start+len(commandPrefix):]
+	end := strings.Index(command, "` starts the history")
+	if end < 0 {
+		t.Fatalf("init emitted an unterminated recovery command:\n%s", got.Stdout)
+	}
+	command = command[:end]
 	// doctor raises the same gap in the same words: it is the surface the
 	// README points at for what is missing, and an empty repository is the
 	// larger of the two durability gaps it reports.
@@ -1564,7 +1617,7 @@ func TestInitDoesNotClaimGitProtectsAnythingItDoesNotYet(t *testing.T) {
 	if !strings.Contains(doc.Stdout, "vault has no commits - an empty repository protects nothing") {
 		t.Errorf("doctor did not raise the empty repository as attention:\n%s", doc.Stdout)
 	}
-	if !strings.Contains(doc.Stdout, "git -C "+quotedRoot+" remote add origin <private repo>") {
+	if !strings.Contains(doc.Stdout, "git -C '"+root+"' remote add origin <private repo>") {
 		t.Errorf("doctor did not quote the vault path in the remote command:\n%s", doc.Stdout)
 	}
 
@@ -1575,6 +1628,23 @@ func TestInitDoesNotClaimGitProtectsAnythingItDoesNotYet(t *testing.T) {
 	}
 	if n := strings.TrimSpace(string(out)); n != "0" {
 		t.Errorf("init made %s commit(s) in the vault; it must never commit for the user", n)
+	}
+	cmd := exec.Command("sh", "-c", command)
+	cmd.Env = append(os.Environ(),
+		"GIT_AUTHOR_NAME=brain-axi test",
+		"GIT_AUTHOR_EMAIL=brain-axi@example.invalid",
+		"GIT_COMMITTER_NAME=brain-axi test",
+		"GIT_COMMITTER_EMAIL=brain-axi@example.invalid",
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("printed recovery command failed: %v: %s\n%s", err, out, command)
+	}
+	out, err = exec.Command("git", "-C", root, "rev-list", "--count", "--all").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.TrimSpace(string(out)); n != "1" {
+		t.Errorf("printed recovery command left %s commits, want 1", n)
 	}
 	// --json carries the same fact, because an agent reads that and not the
 	// rendered attention list.
