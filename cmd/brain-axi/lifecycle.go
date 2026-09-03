@@ -97,7 +97,11 @@ func (a *app) cmdInit() error {
 	case res.GitInited:
 		a.out.Scalar("git", "initialised, "+commitState(commits, commitsKnown))
 	case res.GitSkipped != "":
-		a.out.Scalar("git", "not initialised: "+res.GitSkipped)
+		detail := "not initialised: " + res.GitSkipped
+		if commitsKnown {
+			detail += ", " + commitState(commits, true)
+		}
+		a.out.Scalar("git", detail)
 	}
 	block := render.Block{Name: "created", Columns: render.Cols([]string{"path"}), Empty: "nothing new; the vault was already here"}
 	for _, c := range res.Created {

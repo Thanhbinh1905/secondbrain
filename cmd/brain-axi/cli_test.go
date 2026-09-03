@@ -1598,3 +1598,33 @@ func TestInitDoesNotClaimGitProtectsAnythingItDoesNotYet(t *testing.T) {
 		t.Errorf("init --json reported %d commit(s), known=%v", payload.GitCommits, payload.Known)
 	}
 }
+
+func TestInitReportsExistingRepositoryCommitCount(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not on PATH")
+	}
+	root := filepath.Join(t.TempDir(), "vault")
+	got := invoke(t, root, "2026-09-01T09:00", false, "init", "--path", root, "--timezone", "Europe/Lisbon")
+	if got.Code != exitOK {
+		t.Fatalf("init: exit %d: %s", got.Code, got.Stderr)
+	}
+	for i := 1; i <= 3; i++ {
+		path := filepath.Join(root, fmt.Sprintf("commit-%d.txt", i))
+		if err := os.WriteFile(path, []byte(fmt.Sprintf("%d\n", i)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if out, err := exec.Command("git", "-C", root, "add", "-A").CombinedOutput(); err != nil {
+			t.Fatalf("git add: %v: %s", err, out)
+		}
+		if out, err := exec.Command("git", "-C", root, "-c", "user.name=brain-axi test", "-c", "user.email=brain-axi@example.invalid", "commit", "--quiet", "-m", fmt.Sprintf("commit %d", i)).CombinedOutput(); err != nil {
+			t.Fatalf("git commit: %v: %s", err, out)
+		}
+	}
+	got = invoke(t, root, "2026-09-01T09:00", false, "init", "--path", root)
+	if got.Code != exitOK {
+		t.Fatalf("re-init: exit %d: %s", got.Code, got.Stderr)
+	}
+	if !strings.Contains(got.Stdout, "already a git repository, 3 commits") {
+		t.Errorf("re-init did not report the existing commit count:\n%s", got.Stdout)
+	}
+}

@@ -848,7 +848,7 @@ The Markdown in that directory is the only copy: it is embedded into the binary 
 
 `--claude`, `--codex` and `--pi` are the known agents, `--dir <path>` covers anything else, and naming none installs into every known directory that already exists.
 Each agent resolves its own skills directory rather than declaring one relative to the home directory, because pi's is not expressible that way: it sits under an agent directory that `$PI_CODING_AGENT_DIR` moves wholesale.
-`doctor` reports every known agent's copy, so an installation it cannot see never looks the same as a missing one.
+`doctor` reports every known agent's copy, so a completed installation into a known agent's directory never looks the same as a missing one.
 
 The skill teaches the agent five things and nothing more:
 

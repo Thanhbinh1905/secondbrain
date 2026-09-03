@@ -76,8 +76,9 @@ somewhere else. It never overwrites an existing config, so re-running it is safe
 
 Every other command finds that vault from anywhere. Resolution is `--vault`, then
 `$BRAIN_AXI_VAULT`, then a walk up from the working directory, then `~/vault` and
-`~/secondbrain/vault`. Those last two are peers, so a machine holding both gets a refusal naming
-each one rather than a silent choice between two brains.
+`~/secondbrain/vault`. If no explicit or nearer vault has already settled the resolution, those
+last two are peers, so a machine holding both gets a refusal naming each one rather than a silent
+choice between two brains.
 
 It takes the timezone from your machine and reports the zone it settled on, because that zone is
 what every stored timestamp's UTC offset is written from. Name one yourself with
@@ -93,9 +94,9 @@ what goes into your vault's history is your call.
 how to resolve relative dates, how to review and confirm whole-meeting captures, and the post-write
 echo-back rule. It knows `--claude`, `--codex` and `--pi`, installs into every one of those whose
 directory already exists when you name none, and takes `--dir <path>` for anything else. `--pi`
-follows `$PI_CODING_AGENT_DIR` when that is set. `doctor` reports every copy it finds, so an
-install you have done is never indistinguishable from one you have not, and tells you what is
-missing:
+follows `$PI_CODING_AGENT_DIR` when that is set. `doctor` reports every known agent's copy, so a
+completed installation into one of those directories never looks the same as a missing one, and
+tells you what is missing:
 
 ```
 $ brain-axi doctor
@@ -113,8 +114,8 @@ skill:      /home/you/.claude/skills/secondbrain  installed
 backlog:    no backlog_cmd configured; the dashboard footer omits it
 binary:     v1.0.0
 attention[2]:
-  - vault has no commits - an empty repository protects nothing; `git -C /home/you/vault add -A && git -C /home/you/vault commit -m "vault"` starts the history
-  - vault has no remote - a disk failure loses it; `git -C /home/you/vault remote add origin <private repo>` closes the gap
+  - vault has no commits - an empty repository protects nothing; `git -C '/home/you/vault' add -A && git -C '/home/you/vault' commit -m "vault"` starts the history
+  - vault has no remote - a disk failure loses it; `git -C '/home/you/vault' remote add origin <private repo>` closes the gap
 ```
 
 Those two are the durability gaps `init` cannot close for you, in the order they matter: local
