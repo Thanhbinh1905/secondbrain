@@ -98,7 +98,7 @@ func joinWords(items []string, conj string) string {
 // here rather than reached for so that installing a skill does not depend on
 // the vault package.
 func piAgentDir(home string) string {
-	dir := strings.TrimSpace(os.Getenv(EnvPiAgentDir))
+	dir := os.Getenv(EnvPiAgentDir)
 	switch {
 	case dir == "":
 		return filepath.Join(home, ".pi", "agent")

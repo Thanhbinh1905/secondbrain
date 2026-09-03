@@ -1537,7 +1537,7 @@ func TestInitDoesNotClaimGitProtectsAnythingItDoesNotYet(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git is not on PATH")
 	}
-	root := filepath.Join(t.TempDir(), "vault")
+	root := filepath.Join(t.TempDir(), "vault with space")
 	got := invoke(t, root, "2026-09-01T09:00", false, "init", "--path", root)
 	if got.Code != exitOK {
 		t.Fatalf("init: exit %d: %s", got.Code, got.Stderr)
@@ -1547,7 +1547,8 @@ func TestInitDoesNotClaimGitProtectsAnythingItDoesNotYet(t *testing.T) {
 	}
 	// The gap has to be actionable, not merely stated, and it belongs beside
 	// the missing-remote gap rather than buried in the git line.
-	if !strings.Contains(got.Stdout, "git -C "+root+" add -A") {
+	quotedRoot := shellArg(root)
+	if !strings.Contains(got.Stdout, "git -C "+quotedRoot+" add -A") {
 		t.Errorf("init did not name the command that closes the gap:\n%s", got.Stdout)
 	}
 	// doctor raises the same gap in the same words: it is the surface the
@@ -1562,6 +1563,9 @@ func TestInitDoesNotClaimGitProtectsAnythingItDoesNotYet(t *testing.T) {
 	}
 	if !strings.Contains(doc.Stdout, "vault has no commits - an empty repository protects nothing") {
 		t.Errorf("doctor did not raise the empty repository as attention:\n%s", doc.Stdout)
+	}
+	if !strings.Contains(doc.Stdout, "git -C "+quotedRoot+" remote add origin <private repo>") {
+		t.Errorf("doctor did not quote the vault path in the remote command:\n%s", doc.Stdout)
 	}
 
 	// The claim is about this repository, so it has to be true of it.

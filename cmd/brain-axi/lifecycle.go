@@ -681,7 +681,7 @@ func (a *app) gitDetail(rep *doctorReport) string {
 		// The one durability gap the specification leaves open: local history
 		// protects against a bad edit, not against a dead disk.
 		parts = append(parts, "no remote configured")
-		rep.Attention = append(rep.Attention, "vault has no remote - a disk failure loses it; `git -C "+a.vault.Root+" remote add origin <private repo>` closes the gap")
+		rep.Attention = append(rep.Attention, "vault has no remote - a disk failure loses it; `git -C "+shellArg(a.vault.Root)+" remote add origin <private repo>` closes the gap")
 	default:
 		parts = append(parts, "remote "+remote)
 	}
@@ -705,9 +705,14 @@ func commitState(n int, known bool) string {
 // both raise it, in the same words and naming the same command, because it is
 // the same gap seen from two moments.
 func noCommitsAttention(root string) string {
+	root = shellArg(root)
 	return fmt.Sprintf(
 		"vault has no commits - an empty repository protects nothing; `git -C %s add -A && git -C %s commit -m \"vault\"` starts the history",
 		root, root)
+}
+
+func shellArg(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'"
 }
 
 // gitCommitCount reports how many commits dir's repository holds.

@@ -70,6 +70,20 @@ func TestPiHonoursItsAgentDirOverride(t *testing.T) {
 	}
 }
 
+func TestPiAgentDirOverridePreservesWhitespace(t *testing.T) {
+	home := homeAt(t)
+	dir := " " + filepath.Join(home, "pi-agent") + " "
+	t.Setenv(EnvPiAgentDir, dir)
+	targets, err := Targets(Choice{Pi: true})
+	if err != nil {
+		t.Fatalf("Targets(--pi): %v", err)
+	}
+	want := filepath.Join(dir, "skills")
+	if got := rootOf(t, targets, "pi"); got != want {
+		t.Errorf("$%s whitespace changed: resolved %q, want %q", EnvPiAgentDir, got, want)
+	}
+}
+
 // TestDoctorSeesAnInstalledPiSkill: reporting is the half that makes the
 // install worth having. An installed copy has to be visible, and a stale one
 // has to be visible as stale.
