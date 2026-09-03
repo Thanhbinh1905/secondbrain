@@ -48,9 +48,10 @@ refactor.
 - **The CLI never calls a model, and makes no network call of its own.** The agent resolves natural
   language into absolute arguments. NFR-2 was amended in round 2 and its exact wording is in
   [docs/requirements.md](docs/requirements.md), "NFR-2 was amended": the binary opens no socket and
-  holds no token, and network reach is delegated to explicitly invoked CLIs - `git` for the
-  self-upgrade, `gh` and `glab` for forge status. `today`, `week`, `agenda`, `due`, `ideas`,
-  `search`, `related`, `board`, `recap`, `brief` and the bare dashboard must never reach a forge;
+  holds no token, and network reach is delegated to explicitly invoked CLIs - `git` for a checkout
+  self-upgrade, `curl` or `wget` for a release one, `gh` and `glab` for forge status. `today`,
+  `week`, `agenda`, `due`, `ideas`, `search`, `related`, `board`, `recap`, `brief` and the bare
+  dashboard must never reach a forge;
   `TestOfflineCommandsNeverReachAForge` fails the build if one does. The only additions to that list
   since round two are `pr --refresh`'s sibling `recap --verify-forge`, which reuses the same
   delegation and is opt-in.
@@ -64,6 +65,15 @@ refactor.
 - **Failures surface.** No try/catch, default value or fallback whose purpose is to make an error
   disappear. A malformed file stops the query with `path:line: reason` and exit code 2; it is never
   skipped, defaulted or repaired. `internal/vault/testdata/corrupt/` asserts this file by file.
+- **How a binary was installed is recorded, never inferred.** `install.sh` writes
+  `.brain-axi-install` beside the binary holding `checkout` or `release`. The backward-compatible
+  missing-record rules are owned by FR-13 in [docs/requirements.md](docs/requirements.md). An
+  unknown or unreadable record is refused. Guessing means either replacing a binary the user did
+  not install that way, or printing a command that cannot work, and neither is recoverable from the
+  user's side. `resolveVersion` in
+  `cmd/brain-axi/main.go` is the matching rule for versions: report `dev` only when nothing real is
+  available, never as a stand-in for build information the binary is holding.
+
 - **A brain task is never a delivery work item.** `task` records what the user has to remember to
   *check*; the separate work backlog keeps owning delivery work, and brain-axi has no write path to
   any backlog. Adding assignment, dispatch or progress to this kind would cross that line.
@@ -174,6 +184,19 @@ setting anywhere in this repository.
 **Forge detection keys on the path shape, not the host.** `/pull/<n>` is GitHub and
 `/-/merge_requests/<n>` is GitLab. A host alone cannot tell a self-hosted GitLab from anything else,
 and a self-hosted GitLab is the ordinary case here, so do not "simplify" this to a host switch.
+
+**A release asset's name is `brain-axi_$(uname -s)_$(uname -m)` as printed on the target**, so
+`install.sh` computes its own by interpolation and carries no platform table to keep in sync. The
+Go-side map is `releaseAssets` in `cmd/brain-axi/selfupdate.go`; the build step in
+`.github/workflows/release.yml` is the other end, and `TestReleaseAssetsMatchWorkflow` fails the
+build if they drift. The published `checksums.txt` doubles as the authoritative list of platforms a
+release covers, which is why the script reads its "not published for" message out of it rather than
+out of a list of its own.
+
+**Go stamps no VCS build information inside a git worktree**, because it looks for a `.git`
+directory and a worktree has a file. Anything that depends on `vcs.revision` or on a synthesised
+pseudo-version has to be checked in a real clone; a `go build` in this repository's usual worktree
+reports `dev`, and that is the environment, not a regression.
 
 **`skills/secondbrain/SKILL.md` is embedded from where it lives** (`skills/embed.go`), and
 `templates/board.html` and `templates/recap.html` from `templates/embed.go`, for the same reason.

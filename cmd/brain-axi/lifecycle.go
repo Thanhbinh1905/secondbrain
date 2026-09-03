@@ -391,7 +391,7 @@ func (a *app) diagnose() doctorReport {
 		rep.add("vault", "not found", false)
 		rep.Attention = append(rep.Attention, strings.ReplaceAll(err.Error(), "\n", "; "))
 		rep.Help = append(rep.Help, "Run `brain-axi init` to create a vault")
-		rep.add("binary", version, true)
+		rep.add("binary", buildVersion, true)
 		rep.Fatal = "no vault to check"
 		return rep
 	}
@@ -465,7 +465,7 @@ func (a *app) diagnose() doctorReport {
 	rep.add("git", a.gitDetail(&rep), true)
 	rep.add("skill", a.skillDetail(&rep), true)
 	rep.add("backlog", a.backlogDetail(&rep), true)
-	rep.add("binary", version, true)
+	rep.add("binary", buildVersion, true)
 	if len(rep.Help) == 0 {
 		rep.Help = append(rep.Help, "Run `brain-axi` for the dashboard")
 	}

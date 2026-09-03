@@ -16,7 +16,7 @@
   │  brain-axi       one static Go binary                        │
   │                  owns: parse · validate · query · render     │
   │                  never: a model call, a socket, hidden state │
-  │                  delegates: git · gh · glab, only when asked │
+  │                  delegates: git · curl/wget · gh/glab        │
   └────────────────────────────┬─────────────────────────────────┘
                                │  plain file I/O
   ┌────────────────────────────▼─────────────────────────────────┐
@@ -59,7 +59,7 @@ Each layer is replaceable: a different agent, a different CLI, even a human with
 It exists because three packages need the same two Unicode-aware primitives - diacritic folding for search and ids, display width for alignment - and a shared copy is better than three that can drift.
 
 Tracked tooling and private data live in one repo, with the vault kept separate from the tool.
-`brain-axi update` fast-forwards the tracked half; `vault/` is invisible to it and can never be touched by an upgrade.
+A checkout `brain-axi update` fast-forwards the tracked half; `vault/` is invisible to every upgrade path and can never be touched by one.
 
 ## Vault format
 
@@ -852,21 +852,53 @@ This is a genuine add-on: uninstall the skill and delete the repo, and nothing e
 
 ## Install and self-upgrade
 
-`install.sh` builds from the checkout it is run from, installs to `~/.brain-axi/bin`, links into the first of `~/.local/bin` or `/usr/local/bin`, refuses to install a binary that does not run, and records the checkout path so an upgrade knows what to fast-forward.
-There are no published release artefacts, so building from the checkout beats downloading.
+There are three ways in, and the difference between them is the whole of this section: what a binary reports as its version, and what an upgrade of it even means.
 
-`brain-axi update` with no positional argument is the self-upgrade: fast-forward the recorded checkout, rebuild into a temporary file beside the installed binary, run `--version` on the result, and only then rename it into place.
-A build that does not run replaces nothing.
-It refuses to run against a checkout with uncommitted changes, and `--check` reports whether an upgrade is available without taking one.
+`install.sh` has two modes.
+Piped from the web it downloads the newest release asset for `$(uname -s)`/`$(uname -m)`, verifies it against the release's published `checksums.txt`, and installs it; run from inside a checkout it builds that checkout instead.
+`--release` and `--checkout` demand a mode outright rather than relying on detection, and detection itself keys on whether `$0` is a file inside a clone of this repository, so a script piped through `sh` while the shell happens to sit in a checkout still downloads.
+Both modes install to `~/.brain-axi/bin`, link into the first of `~/.local/bin` or `/usr/local/bin`, and refuse to install a binary that does not run.
+A download that fails its checksum, a platform the release does not publish, a missing `curl`/`wget` or `sha256sum`/`shasum`, and a repository with no release at all are each a loud refusal naming the concrete problem.
+There is deliberately no fall back from a failed download to a source build: a user who piped the script has no checkout and may have no Go, and a silent mode switch would hide a broken release pipeline.
+`go install github.com/Thanhbinh1905/secondbrain/cmd/brain-axi@latest` is the third way, and it needs nothing from this repository beyond the module path being correct.
 
-On NFR-6's "no state outside the vault directory": one file is written outside it, `~/.brain-axi/bin/.brain-axi-source`, holding the path of the checkout.
-It is installation metadata rather than tool state - no command that reads or writes the vault consults it, and deleting it costs nothing but an explicit `--source` on the next upgrade.
+### Reporting a version
+
+`main.version` is an ldflags slot, and `go install` applies no ldflags, so it is only the first of three answers.
+`resolveVersion` takes the stamped value, then `runtime/debug.ReadBuildInfo`'s `Main.Version` when it is a real module version rather than `(devel)`, then the `vcs.revision` build setting shortened to twelve characters with `-dirty` appended when `vcs.modified` is true.
+`dev` means genuinely nothing was available, and is never a stand-in for something that was: a binary that reports `dev` while its own build information names the commit is lying to a user who cannot check it.
+The value is resolved once into `buildVersion`, which is what `--version`, `doctor` and every upgrade report read.
+
+### Upgrading
+
+The install method is recorded, never inferred.
+`install.sh` writes `~/.brain-axi/bin/.brain-axi-install` holding `checkout` or `release`, and a binary with no record at all is a `go install`.
+A record naming something unknown, or one that cannot be read, is a refusal: guessing here means either replacing a binary the user did not install that way, or telling them to run a command that cannot work.
+An explicit `--source` or `$BRAIN_AXI_SOURCE` outranks any record, because that is the user naming a checkout.
+With no method record, a binary that `.brain-axi-source` names a checkout for, or that sits inside a clone of this repository, is a checkout install from before the method was recorded, and keeps upgrading exactly as it always did.
+
+- **checkout** - fast-forward the recorded checkout, rebuild into a temporary file beside the installed binary, run `--version` on the result, and only then rename it into place.
+  It refuses to run against a checkout with uncommitted changes.
+  `--check` fetches and compares against `@{upstream}`.
+- **release** - download the newest asset for this platform beside the installed binary, verify it against the published `checksums.txt`, run `--version` on it, and only then rename it into place.
+  `--check` downloads only the release's one-line `version.txt` rather than a whole binary.
+- **go install** - print the `go install` command that upgrades this installation and exit zero, because nothing is wrong.
+  The Go toolchain placed that binary and is what replaces it; a tool that shelled out to replace itself behind the user's back would be doing something the user can do plainly.
+
+Every path that replaces the binary runs `--version` on the replacement and keeps the old binary if that fails, and assembles the replacement beside the target so the rename that installs it stays on one device and stays atomic.
+
+`releaseAssets` maps a Go platform to its asset name, and the names are shaped exactly like `uname -s` and `uname -m` output so `install.sh` computes one by interpolation and carries no platform table it has to keep in sync.
+That map and `.github/workflows/release.yml` are the only two places the shape lives, and `TestReleaseAssetsMatchWorkflow` fails the build if they disagree.
+
+On NFR-6's "no state outside the vault directory": two files are written outside it, both in `~/.brain-axi/bin` - `.brain-axi-source` holding the path of the checkout, and `.brain-axi-install` naming the method.
+They are installation metadata rather than tool state - no command that reads or writes the vault consults either - and deleting them costs nothing but an explicit `--source` on the next upgrade, or a `go install` message for a binary that did not come from one.
 
 `brain-axi update <id>` is the record mutation.
 The two cannot be confused, because the self-upgrade takes no positional argument - which is exactly how the CLI reference spells them.
 
 On NFR-2 as amended - no network call of its own, network reach delegated to explicitly invoked CLIs: the binary links no network client and holds no token, and the query and capture paths open no socket.
-The fetch inside an explicitly requested upgrade is delegated to `git` as a subprocess, and forge status to `gh` or `glab` (see "Forge status").
+The fetch inside an explicitly requested upgrade is delegated to `git` for a checkout install and to `curl` or `wget` for a release install, and forge status to `gh` or `glab` (see "Forge status").
+A host with neither download tool is told so and refused, rather than the binary growing an HTTP client to cover it.
 Nothing else in the tool reaches anything.
 
 ## Testing
@@ -896,7 +928,7 @@ The order below is why the two modules that carry every real bug were proven bef
 6. Recurring events, on a proven time layer.
 7. The dashboard render, then the interactive `review` triage screen.
 8. Wiki-links, people profiles, `.ics` export.
-9. The skill, `setup skill`, `doctor`, `update` self-upgrade, `install.sh`.
+9. The skill, `setup skill`, `doctor`, `update` self-upgrade, `install.sh`, the release workflow.
 10. A real agent session exercising every user story end to end, across the supported natural-language inputs.
 11. The `task` kind on the proven record and decay layers, then its surfaces.
 12. Batch ingest, on the proven record builders.
@@ -920,7 +952,7 @@ Every FR and NFR, and where it lives.
 | FR-10 | `internal/render/render.go` `Emit`; every `cmd*` function |
 | FR-11 | `internal/skill/skill.go`; `cmd/brain-axi/lifecycle.go` `cmdSetup` |
 | FR-12 | `cmd/brain-axi/capture.go` `findOverlaps` |
-| FR-13 | `cmd/brain-axi/selfupdate.go` `cmdSelfUpdate` |
+| FR-13 | `cmd/brain-axi/selfupdate.go` `cmdSelfUpdate`, `resolveMethod`, `updateFromCheckout`, `updateFromRelease`, `reportGoInstall`; `cmd/brain-axi/main.go` `resolveVersion` |
 | FR-14 | `internal/review/review.go`; `cmd/brain-axi/lifecycle.go` `cmdReview` |
 | FR-15 | `internal/vault/record.go` `KindTask`/`TaskStatuses`/`parseTaskFields`/`Horizon`; `internal/vault/init.go` `BuildTask`; `internal/query/query.go` `Tasks`; `cmd/brain-axi/capture.go` `addTask`; `cmd/brain-axi/recall.go` `cmdTasks`/`taskBlock` |
 | FR-16 | `internal/forge/forge.go` `Detect`/`Fetch`/`Reachable`; `internal/vault/record.go` `parseForgeFields`; `cmd/brain-axi/forge.go` `cmdLink`/`cmdPR` |
@@ -932,11 +964,11 @@ Every FR and NFR, and where it lives.
 | FR-22 | `internal/board/board.go`; `templates/board.html`; `internal/payload`; `cmd/brain-axi/surfaces.go` `cmdBoard` |
 | FR-23 | `internal/recap/recap.go`; `templates/recap.html`; `cmd/brain-axi/surfaces.go` `cmdRecap`; `internal/timeref/timeref.go` `MonthStartAfter`/`QuarterStartAfter` |
 | NFR-1 | The parallel walk in `internal/vault/store.go`; asserted by `TestQueryLatencyOnFiveThousandFiles`, which measures `today`, `tasks`, `due` and the board's assembly |
-| NFR-2 | One Go binary, `time/tzdata` embedded, no network client linked and no token held. Delegation only: `git` for the self-upgrade, `gh`/`glab` for forge status and for `recap --verify-forge`, each behind an explicit command. The board and the recap write a file and serve nothing. Asserted by `TestOfflineCommandsNeverReachAForge` and `TestRecapReachesNothingWithoutVerifyForge` |
+| NFR-2 | One Go binary, `time/tzdata` embedded, no network client linked and no token held. Delegation only: `git` for a checkout self-upgrade, `curl`/`wget` for a release one, `gh`/`glab` for forge status and for `recap --verify-forge`, each behind an explicit command. The board and the recap write a file and serve nothing. Asserted by `TestOfflineCommandsNeverReachAForge` and `TestRecapReachesNothingWithoutVerifyForge` |
 | NFR-3 | `internal/vault/store.go` `WriteFile` |
 | NFR-4 | `internal/frontmatter` error positions; `internal/vault/record.go` validation; exit code 2 |
 | NFR-5 | Plain Markdown with YAML frontmatter, unknown keys preserved, no tool-only files inside record directories |
-| NFR-6 | No cache, no index, no lock. The one file outside the vault is `~/.brain-axi/bin/.brain-axi-source`, written by `install.sh` and read only by `brain-axi update`: it records where the checkout is, and no command that touches the vault reads it |
+| NFR-6 | No cache, no index, no lock. The files outside the vault are installation metadata: `.brain-axi-source` records a checkout path and `.brain-axi-install` records the install method beside the binary. Only lifecycle installation and `brain-axi update` use them; no command that reads or writes the vault consults either file. |
 | NFR-7 | `internal/unitext` width and folding; the Unicode alignment golden tests |
 
 Nothing in the specification is unimplemented.
