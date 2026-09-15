@@ -1,0 +1,14 @@
+id: read-later-rfc-5545
+type: link
+path: links/read-later-rfc-5545.md
+title: read later, rfc 5545 section 3
+url: https://datatracker.ietf.org/doc/html/rfc5545#section-3
+created: 2026-09-01
+touched: 2026-09-01 (15d ago)
+nudge_after: 14d
+body:
+  The recurrence section, for the next time an rrule edge case comes up.
+attention[1]: untouched for 15d, past its 14d nudge horizon: may be u miss this link
+help[2]:
+  - Run `brain-axi update read-later-rfc-5545 --status <status>` to change it
+  - Open links/read-later-rfc-5545.md to edit it by hand

@@ -132,7 +132,12 @@ brain-axi add event "Platform team sync" --when 2026-09-04T14:00 --duration 60m 
 brain-axi add idea "customer referral program"
 brain-axi add task "migrate the staging database" --assignee platform-team --follow-up-after 14d
 brain-axi add note "ask the infrastructure team about CI capacity"
+brain-axi add link "https://example.com/a-good-read" --title "a good read" --body "why it is worth re-reading"
 ```
+
+A saved link is a bookmark with the user's own description. The tool never fetches the address, so
+saving works offline; `links` lists what was saved, and an unread one past its nudge horizon is
+reported as one u may have missed.
 
 An event capture reports the resolved absolute date and its weekday, which is what the agent echoes
 back to you before treating the capture as done.
@@ -668,6 +673,8 @@ brain-axi due                                        what needs attention right 
 brain-axi board                                      five panes, framed or as HTML
 brain-axi recap month                                what the period produced
 brain-axi done <id>                                  event -> done, task -> done, idea -> shipped
+brain-axi links --stale 14d                       saved bookmarks u may have missed
+brain-axi add link "https://example.com/x" --title t  save a bookmark with what it is for
 brain-axi ship <id> --pr <url> --merged-at <ts>      record that the work landed
 brain-axi link fleet <id> --task <external-id>       note an external work item on a record
 brain-axi update <id> --status building              change only the keys you name
@@ -692,6 +699,7 @@ vault/
   notes/                standalone notes
   people/               who the events are with, and what is waiting to be raised
   daily/                one file per day; `add note` appends here
+  links/                saved bookmarks; `url:` plus a description, never fetched
 ```
 
 Any record may also carry `links:` (ids of other records), `raise_with:` (people it is waiting to be

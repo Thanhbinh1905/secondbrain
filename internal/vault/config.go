@@ -30,12 +30,13 @@ const (
 	NotesDir  = "notes"
 	PeopleDir = "people"
 	DailyDir  = "daily"
+	LinksDir  = "links"
 )
 
 // RecordDirs are the directories walked by a query, in a stable order. A vault
 // created before a directory existed simply does not have it, which recordPaths
 // tolerates, so adding one here never breaks an older vault.
-var RecordDirs = []string{EventsDir, IdeasDir, TasksDir, NotesDir, PeopleDir, DailyDir}
+var RecordDirs = []string{EventsDir, IdeasDir, TasksDir, NotesDir, PeopleDir, DailyDir, LinksDir}
 
 // EnvVault names the environment variable that overrides vault resolution.
 const EnvVault = "BRAIN_AXI_VAULT"

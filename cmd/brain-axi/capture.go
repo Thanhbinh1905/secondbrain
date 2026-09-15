@@ -13,7 +13,7 @@ import (
 )
 
 // addKinds are the things add can capture.
-var addKinds = []string{"event", "idea", "task", "note", "person"}
+var addKinds = []string{"event", "idea", "task", "note", "person", "link"}
 
 func (a *app) cmdAdd() error {
 	if a.has("batch") {
@@ -51,6 +51,8 @@ func (a *app) cmdAdd() error {
 		return a.addNote(text)
 	case "person":
 		return a.addPerson(text)
+	case "link":
+		return a.addLink(text)
 	default:
 		return usageError("unknown add kind %q: valid kinds are %s", kind, strings.Join(addKinds, ", "))
 	}
@@ -410,6 +412,59 @@ func (a *app) addNote(text string) error {
 	})
 }
 
+// addLink saves a bookmark with the user's own description: the address plus
+// what it is for, so it can be found and re-read later.
+//
+// The positional text is the URL itself, because the URL is the identity of
+// what is saved; --title names it in listings and defaults to the URL when the
+// capture is too quick for a name. The tool never fetches the address: a save
+// that needs the network is a save that fails on a plane.
+func (a *app) addLink(rawURL string) error {
+	if err := vault.ValidateURL(strings.TrimSpace(rawURL)); err != nil {
+		return usageError("add link: %v", err)
+	}
+	// A saved link carries no status: there is nothing to complete, only
+	// something to keep until it is deleted outright.
+	if a.has("status") {
+		return usageError("add link takes no --status: a link has no status to set")
+	}
+	nudge, hasNudge, err := a.spanFlag("nudge-after")
+	if err != nil {
+		return err
+	}
+	if hasNudge && nudge.ApproxDays() <= 0 {
+		return usageError("--nudge-after must be at least one day")
+	}
+	title := strings.TrimSpace(a.flagOr("title", ""))
+	if title == "" {
+		title = strings.TrimSpace(rawURL)
+	}
+	id, err := a.resolveID(unitext.SlugN(title, 60))
+	if err != nil {
+		return err
+	}
+	links, raiseWith, err := a.linkFlags()
+	if err != nil {
+		return err
+	}
+	rel, doc, err := a.vault.BuildLink(vault.NewLink{
+		ID: id, Title: title, URL: strings.TrimSpace(rawURL),
+		NudgeAfter: nudge, HasNudge: hasNudge,
+		Body: a.flagOr("body", ""), Created: a.vault.Zone.DateOf(a.now),
+		Tags: a.listFlag("tags"), Links: links, RaiseWith: raiseWith,
+	})
+	if err != nil {
+		return usageError("%v", err)
+	}
+	if err := a.vault.Save(rel, doc); err != nil {
+		return err
+	}
+	return a.reportAdd(addResult{
+		Kind: "link", ID: id, Path: rel, Title: title, URL: strings.TrimSpace(rawURL),
+		NudgeAfter: a.vault.Horizon(&vault.Record{}).String(),
+	})
+}
+
 func (a *app) addPerson(name string) error {
 	id, err := a.resolveID(unitext.SlugN(name, 60))
 	if err != nil {
@@ -454,6 +509,7 @@ type addResult struct {
 	Due           string `json:"due,omitempty"`
 	Assignee      string `json:"assignee,omitempty"`
 	FollowUpAfter string `json:"follow_up_after,omitempty"`
+	URL           string `json:"url,omitempty"`
 }
 
 func (a *app) reportAdd(r addResult) error {
@@ -492,6 +548,9 @@ func (a *app) reportAdd(r addResult) error {
 	}
 	if r.FollowUpAfter != "" {
 		a.out.Scalar("follow_up_after", r.FollowUpAfter)
+	}
+	if r.URL != "" {
+		a.out.Scalar("url", r.URL)
 	}
 	if r.Note != "" {
 		a.out.Scalar("note", r.Note)

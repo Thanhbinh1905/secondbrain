@@ -241,11 +241,113 @@ body
 	}
 }
 
+// TestSavedLinksCarryAgeAddressAndStaleness: a bookmark listing is the same
+// decay question ideas answer, asked of links instead of thoughts.
+func TestSavedLinksCarryAgeAddressAndStaleness(t *testing.T) {
+	e := engine(t, "2026-09-02T12:00")
+	rows, err := e.SavedLinks(LinkFilter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("links = %d, want the one fixture", len(rows))
+	}
+	r := rows[0]
+	if r.Record.ID != "read-later-rfc-5545" {
+		t.Errorf("id = %q", r.Record.ID)
+	}
+	if r.Record.URL != "https://datatracker.ietf.org/doc/html/rfc5545#section-3" {
+		t.Errorf("url = %q", r.Record.URL)
+	}
+	if r.AgeDays != 1 || r.PastHorizon {
+		t.Errorf("a day-old link reads %dd past=%v, want 1d not-past", r.AgeDays, r.PastHorizon)
+	}
+	// Two weeks later the same link is the "may be u miss this link" list.
+	e = engine(t, "2026-09-16T12:00")
+	rows, err = e.SavedLinks(LinkFilter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || !rows[0].PastHorizon {
+		t.Errorf("a 15-day-unread link is not flagged: %+v", rows)
+	}
+	// --stale keeps only what has been ignored at least that long.
+	stale, _ := timeref.ParseSpan("14d")
+	rows, err = engine(t, "2026-09-02T12:00").SavedLinks(LinkFilter{Stale: stale, HasStale: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Errorf("--stale 14d on a fresh link gave %d rows", len(rows))
+	}
+}
+
+// TestSavedLinksSurfaceTheMostLikelyMissedFirst: newest-touched last, so the
+// longest-unread bookmark reads first.
+func TestSavedLinksSurfaceTheMostLikelyMissedFirst(t *testing.T) {
+	dir := t.TempDir()
+	v := freshVault(t, dir)
+	for _, tc := range []struct{ id, touched string }{
+		{"fresh-link", "2026-09-01"},
+		{"stale-link", "2026-08-01"},
+	} {
+		write(t, v, "links/"+tc.id+".md", `---
+type: link
+id: `+tc.id+`
+title: `+tc.id+`
+url: https://example.com/`+tc.id+`
+created: 2026-08-01
+touched: `+tc.touched+`
+---
+
+body
+`)
+	}
+	now, _ := v.Zone.Normalise("2026-09-02T12:00")
+	rows, err := New(v, now).SavedLinks(LinkFilter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 || rows[0].Record.ID != "stale-link" || rows[1].Record.ID != "fresh-link" {
+		t.Errorf("order is not most-missed first: %v", rows)
+	}
+}
+
+// TestSearchFindsSavedLinksByAddress: a bookmark is found by its address as
+// well as by its description, so "which saved link handles X" matches X in the
+// URL too. It ranks with the title, above tags and body.
+func TestSearchFindsSavedLinksByAddress(t *testing.T) {
+	e := engine(t, "2026-09-02T12:00")
+	hits, err := e.Search("datatracker", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) == 0 || hits[0].Record.ID != "read-later-rfc-5545" {
+		t.Fatalf("Search(%q) did not find the saved link: %v", "datatracker", hits)
+	}
+	if hits[0].Field != "url" {
+		t.Errorf("the hit names field %q, want url", hits[0].Field)
+	}
+	if !strings.Contains(hits[0].Line, "datatracker") {
+		t.Errorf("the hit carries no address as context: %q", hits[0].Line)
+	}
+	// A phrase from the description finds the same link through its body, so
+	// "which saved link handles X" is answered from the top hits without
+	// listing the whole shelf.
+	body, err := e.Search("edge case", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(body) == 0 || body[0].Record.ID != "read-later-rfc-5545" {
+		t.Errorf("Search(%q) did not rank the described link first: %v", "edge case", body)
+	}
+}
+
 // TestSearchMatchesDiacriticsBothWays covers US-7 and FR-6.
 func TestSearchMatchesDiacriticsBothWays(t *testing.T) {
 	e := engine(t, "2026-09-02T12:00")
 	// The ranking rules are: a diacritic-exact match before a folded one, then
-	// id before title before tags before body, then most recently touched.
+	// id before title before url before tags before body, then most recently touched.
 	cases := map[string]string{
 		"program":        "customer-referral", // only its title carries it
 		"krakow rollout": "daily-2026-09-01",  // the only text holding the phrase

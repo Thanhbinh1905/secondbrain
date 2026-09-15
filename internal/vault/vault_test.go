@@ -63,7 +63,7 @@ func TestCorruptVaultFailsLoudly(t *testing.T) {
 		"events/unknown-status.md":        `events/unknown-status.md:6: unknown status "maybe" for a event: valid values are scheduled, done, cancelled`,
 		"ideas/malformed-yaml.md":         `ideas/malformed-yaml.md:4: mapping values are not allowed in this context`,
 		"ideas/missing-touched.md":        `ideas/missing-touched.md:2: an idea must have a touched date; it is what its age is measured from`,
-		"ideas/unknown-type.md":           `ideas/unknown-type.md:2: unknown type "reminder": valid types are event, idea, task, note, person, daily`,
+		"ideas/unknown-type.md":           `ideas/unknown-type.md:2: unknown type "reminder": valid types are event, idea, task, note, person, daily, link`,
 		"notes/bad-id.md":                 `notes/bad-id.md:3: id "Not A Valid Id" must be lower-case letters, digits, dot, underscore or hyphen, starting with a letter or digit`,
 		"notes/duplicate-key.md":          `notes/duplicate-key.md:5: duplicate key "title", first defined on line 4`,
 		"notes/no-frontmatter.md":         `notes/no-frontmatter.md:1: missing frontmatter: file must begin with "---"`,
@@ -74,6 +74,13 @@ func TestCorruptVaultFailsLoudly(t *testing.T) {
 		"tasks/missing-touched.md": `tasks/missing-touched.md:2: a task must have a touched date; it is what its follow-up horizon is measured from`,
 		"tasks/naive-due.md":       `tasks/naive-due.md:6: timestamp "2026-09-05T17:00:00" has no UTC offset: a stored timestamp must always carry one (for example 2026-09-05T17:00:00+07:00)`,
 		"tasks/bad-assignee.md":    `tasks/bad-assignee.md:6: id "Platform Team" must be lower-case letters, digits, dot, underscore or hyphen, starting with a letter or digit`,
+
+		"links/missing-url.md":  `links/missing-url.md:2: a link must have a url: without an address there is nothing to open later`,
+		"links/bad-scheme.md":   `links/bad-scheme.md:5: url "ftp://example.com/a-good-read" must start with http:// or https://`,
+		"links/no-host.md":      `links/no-host.md:5: url "https://" names no host`,
+		"links/stray-status.md": `links/stray-status.md:6: a link must not have a status`,
+
+		"ideas/stray-url.md": `ideas/stray-url.md:5: a idea must not have a url: only a saved link carries one`,
 
 		"notes/stray-follow-up.md": `notes/stray-follow-up.md:7: a note must not have a follow_up_after`,
 		// The forge cache is derived data living in the source of truth, which
@@ -344,8 +351,8 @@ func TestGoodVaultParsesEveryRecord(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the good fixture must parse cleanly: %v", err)
 	}
-	if len(records) != 13 {
-		t.Errorf("parsed %d records, want 13", len(records))
+	if len(records) != 14 {
+		t.Errorf("parsed %d records, want 14", len(records))
 	}
 	byID := map[string]*Record{}
 	for _, r := range records {

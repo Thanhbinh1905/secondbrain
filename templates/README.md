@@ -21,6 +21,11 @@ A `task` writes `assignee:`, `due:` and `follow_up_after:` only when it has them
 shows the fullest shape rather than the commonest one. `status:` defaults to `open`, or to `waiting`
 when the task has an assignee.
 
+A `link` is a saved bookmark: a `url:` the tool never fetches, plus the description that says what
+it is for. It carries no status - there is nothing to complete, only something to keep until
+`rm --yes` deletes it - so `done` and `update --status` refuse it. `nudge_after:` is optional and
+falls back to the vault default, so a link past its horizon resurfaces until it is deleted.
+
 Any record may also carry a linked pull or merge request, added by `brain-axi link`:
 
 ```yaml

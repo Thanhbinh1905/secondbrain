@@ -118,7 +118,7 @@ Ruthless surfacing of decay is the counterweight, and it ships in the first rele
 | ID | Requirement |
 | --- | --- |
 | FR-1 | `init` creates the vault skeleton, `.brain/config.yml`, a `.gitignore`, and initialises a git repository inside `vault/`, under the working directory unless `--path` names another. It reports how many commits that repository holds and never makes one: an empty repository protects nothing, and what enters the vault's history is the user's decision. Every command resolves the vault through `--vault`, `$BRAIN_AXI_VAULT`, a walk up from the working directory, then `~/vault` and `~/secondbrain/vault`. If no earlier tier selects a vault, those two are peers, so a machine holding both is refused, naming each candidate and both ways to settle it, for reading commands as well as writing ones. |
-| FR-2 | `add {event,idea,note}` writes one Markdown file with validated frontmatter and returns its stable id. |
+| FR-2 | `add {event,idea,task,note,person,link}` writes one Markdown file with validated frontmatter and returns its stable id. |
 | FR-3 | Every timestamp is stored with an explicit UTC offset. A naive local time is accepted on input and normalised using the vault timezone; it is never stored naive. |
 | FR-4 | `today` / `week` / `agenda --from --to` return chronologically ordered events, flagging the next upcoming one. |
 | FR-5 | `ideas` filters by status and reports each idea's age; `--stale <dur>` restricts to untouched-beyond-threshold. |
@@ -140,6 +140,7 @@ Ruthless surfacing of decay is the counterweight, and it ships in the first rele
 | FR-21 | `link fleet <id> --task <external-id>` records a reference to an external supervisor's work item, and `ship <id> --pr <url> --merged-at <timestamp>` records that the work landed. Both validate strictly, fail loudly, and are pure local writes: brain-axi never reads external state and stays fully usable with no supervisor present. What shipped is queryable by period. |
 | FR-22 | `board` renders five panes in a fixed order - Today, This week, Tasks, Ideas pending, Waiting on others - from one assembled model through two renderers: a framed ASCII board, and a self-contained HTML file written to a caller-supplied path. A committed template owns all markup, the payload satisfies the versioned `brain-board.v1` contract, and validation is fail-closed before any existing file is touched. `--open` may hand the file to a configured viewer and must keep the file and exit non-zero when that viewer is absent. |
 | FR-23 | `recap <week\|month\|quarter>` reports what the period produced, on the same two-renderer treatment. It counts outcomes and never activity, renders an unknown value as unknown rather than zero, renders a slow period neutrally, and compares only against the same vault's own previous equivalent period. `--verify-forge` is opt-in and is the only part that reaches a forge. |
+| FR-24 | `link` is a record kind for saved bookmarks: a `url:` carrying only `http`/`https` with a host, a required `touched:` date and an optional `nudge_after:` horizon falling back to the vault default. It carries no status - there is nothing to complete, only something to keep until `rm --yes` deletes it outright. `add link <url>` stores the address with the user's own description and never fetches it; `links` lists saved bookmarks newest-touched last with an attention line for ones past their horizon. Like every other command it walks the whole vault, writes one file, and never reaches a forge. |
 
 Where each of these is implemented is recorded in [design.md](design.md), "Requirement coverage".
 
@@ -169,7 +170,7 @@ What is still literally true, and is the whole of the amendment:
   a release. Those programs own their hosts, credentials and transport; brain-axi never does.
 - **Only an explicitly requested command delegates.** `pr --refresh`, `link --refresh`,
   `recap --verify-forge` and `doctor` reach a forge. `today`, `week`, `agenda`, `due`, `ideas`,
-  `search`, `related`, `board`, `recap`, `brief` and the bare dashboard never do, and are asserted
+  `links`, `search`, `show`, `related`, `board`, `recap`, `brief` and the bare dashboard never do, and are asserted
   not to by `TestOfflineCommandsNeverReachAForge`. A second brain that cannot answer a question
   about today's schedule on a plane is broken.
 - **The board and the recap open nothing either.** Both write a file, and writing that file is the

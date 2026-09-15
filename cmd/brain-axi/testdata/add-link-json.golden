@@ -1,0 +1,8 @@
+{
+  "kind": "link",
+  "id": "https-example-com-a-good-read",
+  "path": "links/https-example-com-a-good-read.md",
+  "title": "https://example.com/a-good-read",
+  "nudge_after": "14d",
+  "url": "https://example.com/a-good-read"
+}

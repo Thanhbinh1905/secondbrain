@@ -156,9 +156,9 @@ func usageError(format string, a ...any) error {
 }
 
 const usage = `usage: brain-axi [command] [args] [flags]
-commands[25]:
-  (none)=dashboard, today, week, agenda, due, add, ideas, tasks, search, show,
-  related, board, recap, done, update, link, ship, pr, rm, review, export,
+commands[26]:
+  (none)=dashboard, today, week, agenda, due, add, ideas, links, tasks, search,
+  show, related, board, recap, done, update, link, ship, pr, rm, review, export,
   brief, init, setup, doctor
 flags[6]:
   --json (machine-readable output), --vault <path> (after command),
@@ -179,8 +179,10 @@ examples:
   brain-axi add task "migrate the staging database" --assignee platform-team --follow-up-after 14d
   brain-axi add note "ask the infrastructure team about CI capacity"
   brain-axi add person "Platform team"
+  brain-axi add link "https://example.com/a-good-read" --title "a good read" --body "why it is worth re-reading"
   brain-axi add --batch meeting-2026-09-04.yml
   brain-axi ideas --status pending --stale 14d
+  brain-axi links --stale 14d
   brain-axi tasks --assignee platform-team
   brain-axi search "zurich"          # diacritic-insensitive: finds "Zürich"
   brain-axi show customer-referral
@@ -254,8 +256,8 @@ Only an idea, a task or a note can ship. The timestamp must carry an explicit UT
 every period report counts from it. --force replaces an existing ship record.
 This is a local write; nothing is read back from any external system.
 `,
-	"add": `usage: brain-axi add <event|idea|task|note|person> <text> [flags]
-       brain-axi add --batch <file>
+	"add": `usage: brain-axi add <event|idea|task|note|person|link> <text> [flags]
+        brain-axi add --batch <file>
 event flags:
   --when <timestamp>   required; absolute, naive times are normalised to the vault zone
   --duration <span>    60m, 90m, 2h30m
@@ -271,20 +273,26 @@ task flags:
   --assignee <id>          a people/ record this was handed to
   --follow-up-after <span> how long before you are reminded to check on it
   --status <status>        open (default), waiting (default with --assignee), done, dropped
+link flags:
+  --title <text>         what the link is called in listings; defaults to the URL
+  --nudge-after <span>   how long before an unread link resurfaces; default is the vault's
+  --tags <tags>          comma-separated tags
 batch:
   --batch <file>       ingest a whole batch file; every record is stored or none is
 shared flags:
   --id <id>            override the generated id
   --body <text>        body text; the tool never summarises it
-  --tags <tags>        comma-separated tags (note only)
+  --tags <tags>        comma-separated tags (note and link only)
   --links <ids>        comma-separated record ids this one points at
   --raise-with <ids>   comma-separated people to raise this with; it lands on
                        their agenda until it is raised or the record closes
 notes:
   a note lands in today's daily file so it is never orphaned
   a task is something to remember to check, never a delivery work item
+  a link is a bookmark the tool never fetches: saving one needs no network
 `,
 	"ideas":  "usage: brain-axi ideas [--status <status>] [--stale <span>] [--json]\nEvery row carries its age.\n",
+	"links":  "usage: brain-axi links [--stale <span>] [--json]\nSaved bookmarks, newest-touched last. Every row carries its age and its address; an unread link past its nudge horizon is reported as one u may have missed.\n",
 	"tasks":  "usage: brain-axi tasks [--status <status>] [--assignee <id>] [--overdue] [--all] [--json]\nOutstanding commitments by default; --all includes done and dropped, --overdue keeps only what is past its follow-up horizon.\n",
 	"search": "usage: brain-axi search <text> [--limit <n>] [--json]\nMatches with and without diacritics in both directions.\n",
 	"show":   "usage: brain-axi show <id> [--json]\nPrints one record with its links and backlinks. A cached forge status is shown with the time it was read.\n",
@@ -325,7 +333,7 @@ func (a *app) helpFor(command string) error {
 
 // commandNames lists every dispatchable command, for the unknown-command error.
 var commandNames = []string{
-	"today", "week", "agenda", "due", "add", "ideas", "tasks", "search", "show",
+	"today", "week", "agenda", "due", "add", "ideas", "links", "tasks", "search", "show",
 	"related", "board", "recap", "done", "update", "link", "ship", "pr", "rm",
 	"review", "export", "brief", "init", "setup", "doctor",
 }

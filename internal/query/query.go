@@ -179,6 +179,61 @@ func (e *Engine) Ideas(f IdeaFilter) ([]IdeaRow, error) {
 	return out, nil
 }
 
+// LinkRow is one saved link with the age that lets an unread one resurface:
+// "may be u miss this link" is the same decay question ideas already answer,
+// asked of bookmarks instead of thoughts.
+type LinkRow struct {
+	Record *vault.Record
+	// AgeDays counts calendar days since the link was last touched.
+	AgeDays int
+	// HorizonDays is the nudge horizon that applies, its own or the vault's.
+	HorizonDays int
+	// PastHorizon reports whether it has sat untouched longer than that. A link
+	// never closes - there is no status to complete - so it keeps resurfacing
+	// until it is deleted outright.
+	PastHorizon bool
+}
+
+// LinkFilter narrows a saved-link listing.
+type LinkFilter struct {
+	// Stale, when set, keeps only links untouched for at least that long.
+	Stale    timeref.Span
+	HasStale bool
+}
+
+// SavedLinks lists saved bookmarks newest-touched last, each row carrying its
+// age and its address.
+func (e *Engine) SavedLinks(f LinkFilter) ([]LinkRow, error) {
+	records, err := e.Vault.Walk()
+	if err != nil {
+		return nil, err
+	}
+	var out []LinkRow
+	for _, r := range records {
+		if r.Kind != vault.KindLink {
+			continue
+		}
+		age := e.Vault.AgeDays(r, e.Now)
+		if f.HasStale && age < f.Stale.ApproxDays() {
+			continue
+		}
+		out = append(out, LinkRow{
+			Record:      r,
+			AgeDays:     age,
+			HorizonDays: e.Vault.Horizon(r).ApproxDays(),
+			PastHorizon: e.Vault.PastHorizon(r, e.Now),
+		})
+	}
+	// Newest-touched last, so the link most likely missed reads first.
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].AgeDays != out[j].AgeDays {
+			return out[i].AgeDays > out[j].AgeDays
+		}
+		return out[i].Record.ID < out[j].Record.ID
+	})
+	return out, nil
+}
+
 // TaskRow is one task with everything that decides how loudly it should be
 // surfaced: when it is due, and how long it has gone unchecked.
 type TaskRow struct {
@@ -452,6 +507,17 @@ func bestHit(r *vault.Record, needle, lowered, folded string) (Hit, bool, error)
 		}
 		if strings.Contains(unitext.Fold(r.Title), folded) {
 			return Hit{Record: r, Line: r.Title, LineNo: 0, Field: "title", Exact: false}, true, nil
+		}
+	}
+	// A saved link is found by its address too: the URL is what the record
+	// is, so asking "which saved link handles X" matches X in the address as
+	// well as in the description. It ranks with the title, above tags and body.
+	if r.HasURL {
+		if strings.Contains(strings.ToLower(r.URL), lowered) {
+			return Hit{Record: r, Line: r.URL, LineNo: 0, Field: "url", Exact: true}, true, nil
+		}
+		if strings.Contains(unitext.Fold(r.URL), folded) {
+			return Hit{Record: r, Line: r.URL, LineNo: 0, Field: "url", Exact: false}, true, nil
 		}
 	}
 	for _, tag := range r.Tags {

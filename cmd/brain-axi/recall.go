@@ -359,6 +359,82 @@ func (a *app) cmdIdeas() error {
 	return nil
 }
 
+// linkRow is one saved-link listing row in JSON.
+type linkRow struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	URL         string `json:"url"`
+	AgeDays     int    `json:"age_days"`
+	HorizonDays int    `json:"horizon_days"`
+	PastHorizon bool   `json:"past_horizon"`
+	Created     string `json:"created"`
+	Touched     string `json:"touched"`
+	Path        string `json:"path"`
+}
+
+// cmdLinks lists saved bookmarks newest-touched last, each row carrying its
+// age and its address. The attention lines are the "may be u miss this link"
+// list: what nobody opened past its nudge horizon.
+func (a *app) cmdLinks() error {
+	if err := a.requireArgs(0, "links"); err != nil {
+		return err
+	}
+	if err := a.openVault(); err != nil {
+		return err
+	}
+	// A saved link carries no status, so there is nothing to filter by: the
+	// listing is the whole shelf, most-likely-missed first.
+	if a.has("status") {
+		return usageError("links takes no --status: a link has no status to filter by")
+	}
+	stale, hasStale, err := a.spanFlag("stale")
+	if err != nil {
+		return err
+	}
+	rows, err := a.engine().SavedLinks(query.LinkFilter{
+		Stale: stale, HasStale: hasStale,
+	})
+	if err != nil {
+		return err
+	}
+	jsonRows := make([]linkRow, 0, len(rows))
+	for _, r := range rows {
+		touched := r.Record.Created.String()
+		if r.Record.HasTouched {
+			touched = r.Record.Touched.String()
+		}
+		jsonRows = append(jsonRows, linkRow{
+			ID: r.Record.ID, Title: r.Record.Title, URL: r.Record.URL,
+			AgeDays: r.AgeDays, HorizonDays: r.HorizonDays, PastHorizon: r.PastHorizon,
+			Created: r.Record.Created.String(), Touched: touched, Path: r.Record.Rel,
+		})
+	}
+	if a.out.JSON {
+		return a.out.Emit(map[string]any{"now": timeref.Format(a.now), "links": jsonRows})
+	}
+	block := render.Block{
+		Name:    "links",
+		Columns: render.Cols([]string{"id", "title", "url", "age"}, "age"),
+		Empty:   "no saved links",
+	}
+	var attention []string
+	for _, r := range jsonRows {
+		block.Rows = append(block.Rows, []string{
+			r.ID, r.Title, r.URL, strconv.Itoa(r.AgeDays) + "d",
+		})
+		if r.PastHorizon {
+			attention = append(attention, fmt.Sprintf("%s untouched for %dd, past its %dd horizon: may be u miss this link", r.ID, r.AgeDays, r.HorizonDays))
+		}
+	}
+	a.out.Block(block)
+	a.out.Attention(attention)
+	a.out.Help([]string{
+		"Run `brain-axi show <id>` for the link's description",
+		"Run `brain-axi rm <id> --yes` to delete it outright",
+	})
+	return nil
+}
+
 // taskRow is one task listing row in JSON.
 type taskRow struct {
 	ID          string `json:"id"`
@@ -564,6 +640,9 @@ func (a *app) cmdShow() error {
 	if r.Status != "" {
 		a.out.Scalar("status", r.Status)
 	}
+	if r.HasURL {
+		a.out.Scalar("url", r.URL)
+	}
 	if r.HasWhen {
 		a.out.Scalar("when", timeref.Format(r.When))
 		if !r.Duration.IsZero() {
@@ -609,7 +688,7 @@ func (a *app) cmdShow() error {
 	if r.HasTouched {
 		a.out.Scalar("touched", fmt.Sprintf("%s (%dd ago)", r.Touched, a.vault.AgeDays(r, a.now)))
 	}
-	if r.HasNudge || r.Kind == vault.KindIdea {
+	if r.HasNudge || r.Kind == vault.KindIdea || r.Kind == vault.KindLink {
 		a.out.Scalar("nudge_after", a.vault.Horizon(r).String())
 	}
 	if len(r.Tags) > 0 {
@@ -682,6 +761,10 @@ func (a *app) showAttention(r *vault.Record, links query.LinkGraph) []string {
 		out = append(out, fmt.Sprintf("past its %s nudge horizon by %dd",
 			a.vault.Horizon(r).String(), a.vault.AgeDays(r, a.now)-a.vault.Horizon(r).ApproxDays()))
 	}
+	if a.vault.PastHorizon(r, a.now) && r.Kind == vault.KindLink {
+		out = append(out, fmt.Sprintf("untouched for %dd, past its %s nudge horizon: may be u miss this link",
+			a.vault.AgeDays(r, a.now), a.vault.Horizon(r).String()))
+	}
 	if r.Kind == vault.KindTask && vault.TaskIsOpen(r.Status) {
 		if r.HasDue && r.Due.Before(a.now) {
 			out = append(out, fmt.Sprintf("was due %s, %dd ago", timeref.Format(r.Due),
@@ -716,6 +799,9 @@ func (a *app) showJSON(r *vault.Record, links query.LinkGraph) (map[string]any, 
 	}
 	if r.Status != "" {
 		obj["status"] = r.Status
+	}
+	if r.HasURL {
+		obj["url"] = r.URL
 	}
 	if r.HasWhen {
 		obj["when"] = timeref.Format(r.When)
@@ -766,7 +852,7 @@ func (a *app) showJSON(r *vault.Record, links query.LinkGraph) (map[string]any, 
 		obj["touched"] = r.Touched.String()
 		obj["age_days"] = a.vault.AgeDays(r, a.now)
 	}
-	if r.Kind == vault.KindIdea || r.HasNudge {
+	if r.Kind == vault.KindIdea || r.HasNudge || r.Kind == vault.KindLink {
 		obj["nudge_after"] = a.vault.Horizon(r).String()
 		obj["past_horizon"] = a.vault.PastHorizon(r, a.now)
 	}

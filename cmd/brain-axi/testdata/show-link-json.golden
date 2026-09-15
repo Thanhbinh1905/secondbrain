@@ -1,0 +1,18 @@
+{
+  "age_days": 1,
+  "backlinks": [],
+  "body": "\nThe recurrence section, for the next time an rrule edge case comes up.\n",
+  "body_links": [],
+  "created": "2026-09-01",
+  "id": "read-later-rfc-5545",
+  "links": [],
+  "nudge_after": "14d",
+  "past_horizon": false,
+  "path": "links/read-later-rfc-5545.md",
+  "raise_with": [],
+  "title": "read later, rfc 5545 section 3",
+  "touched": "2026-09-01",
+  "type": "link",
+  "url": "https://datatracker.ietf.org/doc/html/rfc5545#section-3",
+  "with_profiles": []
+}
