@@ -34,7 +34,7 @@ func ValidateRRule(spec string) error {
 	// DTSTART belongs to when:, not to the rule; two sources of truth for the
 	// series start is exactly the disagreement this format avoids.
 	if strings.Contains(strings.ToUpper(spec), "DTSTART") {
-		return fmt.Errorf("rrule must not carry DTSTART: the series starts at when:")
+		return fmt.Errorf("rrule must not carry DTSTART: the series starts at when")
 	}
 	if _, err := rrule.StrToRRule(spec); err != nil {
 		return fmt.Errorf("invalid rrule %q: %v; expected an RFC 5545 rule such as FREQ=WEEKLY;BYDAY=FR", spec, err)

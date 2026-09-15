@@ -165,7 +165,7 @@ sha256() {
 if [ "$MODE" = checkout ]; then
   if ! command -v go >/dev/null 2>&1; then
     echo "Go is required to build brain-axi from a checkout and is not on PATH." >&2
-    echo "Install Go 1.26 or newer, or run ./install.sh --release to download a binary." >&2
+    echo "Install Go 1.22 or newer, or run ./install.sh --release to download a binary." >&2
     exit 1
   fi
 

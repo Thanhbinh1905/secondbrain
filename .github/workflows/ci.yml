@@ -40,11 +40,19 @@ jobs:
       - name: go test
         # NFR-1's 100 ms budget describes a developer's own host. A shared
         # two-core runner has been observed parsing the same 5,000-file vault
-        # in up to ~470 ms for `search`, and that varies with runner load, not
-        # with the code, so the strict default would fail here for reasons
-        # unrelated to a regression. The budget is raised for CI only, with
-        # headroom over the observed range; the tests still run and still log
-        # every real measurement, so an order-of-magnitude regression fails.
+        # in up to ~470 ms for `search`, so CI allows headroom while retaining
+        # the measured regression assertion.
         env:
           BRAIN_AXI_LATENCY_BUDGET: 800ms
         run: go test ./...
+
+      - name: go test with race detector
+        env:
+          BRAIN_AXI_LATENCY_BUDGET: 800ms
+        run: go test -race ./...
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.1.6
+          args: --disable=errcheck
