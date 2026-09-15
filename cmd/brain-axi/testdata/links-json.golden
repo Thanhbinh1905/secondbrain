@@ -1,0 +1,16 @@
+{
+  "links": [
+    {
+      "id": "read-later-rfc-5545",
+      "title": "read later, rfc 5545 section 3",
+      "url": "https://datatracker.ietf.org/doc/html/rfc5545#section-3",
+      "age_days": 1,
+      "horizon_days": 14,
+      "past_horizon": false,
+      "created": "2026-09-01",
+      "touched": "2026-09-01",
+      "path": "links/read-later-rfc-5545.md"
+    }
+  ],
+  "now": "2026-09-02T12:00:00+07:00"
+}

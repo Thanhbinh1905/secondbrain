@@ -1,0 +1,3 @@
+removed: read-later-rfc-5545
+path: links/read-later-rfc-5545.md
+help[1]: Run `git checkout -- links/read-later-rfc-5545.md` inside the vault to bring it back if it was committed

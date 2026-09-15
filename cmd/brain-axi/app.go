@@ -232,6 +232,8 @@ func (a *app) dispatch() error {
 		return a.cmdPR()
 	case "ideas":
 		return a.cmdIdeas()
+	case "links":
+		return a.cmdLinks()
 	case "search":
 		return a.cmdSearch()
 	case "show":

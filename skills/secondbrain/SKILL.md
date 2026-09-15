@@ -41,6 +41,10 @@ Reach for it, rather than answering from conversation memory, whenever the user:
   `brain-axi show <person>`.
 - asks what a period produced. `brain-axi recap <week|month|quarter>`.
 - says "remember this", "note this down", "jot that down". Capture it.
+- pastes a link worth keeping. Save it with `brain-axi add link <url> --title <text>
+  --body <text>`: the address plus what it is for, so it resurfaces when unread.
+- asks what links were saved, or what might have been missed. `brain-axi links` lists them
+  newest-touched last with their age; an unread one past its nudge horizon is the missed list.
 - asks what is on today, this week, or a date range. Query it.
 - asks what is pending, stale, or waiting on them. Query it - `ideas` for thoughts, `tasks` for
   commitments.
@@ -99,6 +103,7 @@ brain-axi add task "review CI capacity" --due 2026-09-05T17:00 --follow-up-after
 brain-axi add task "migrate the staging database" --assignee platform-team --follow-up-after 14d
 brain-axi add note "ask operations about CI capacity"
 brain-axi add person "Platform team"
+brain-axi add link "https://example.com/a-good-read" --title "a good read" --body "why it is worth re-reading"
 brain-axi add idea "cache the schedule expiry lookup" --links platform-team-sync-20260904
 brain-axi add task "review CI capacity" --raise-with platform-team
 ```
@@ -120,6 +125,12 @@ brain-axi add task "review CI capacity" --raise-with platform-team
   takes a `people/` id and defaults the status to `waiting`. `--follow-up-after` is the field that
   matters: it is what makes the thing resurface on its own. When no horizon is named, ask or
   use a sensible one rather than leaving it to the vault default silently.
+- A **link** is a bookmark with the user's own description: the URL is the positional argument and
+  `--title` names it in listings, defaulting to the URL. `--body` is what it is for - write that,
+  never a summary of the page. The tool never fetches the address, so saving works offline; only
+  `http`/`https` with a host is accepted. A link has no status: nothing to mark read, only
+  `rm --yes` to delete it outright. An old one past its nudge horizon resurfaces under
+  `brain-axi links` until it is deleted.
 
 ## Capturing a whole meeting note
 
@@ -222,6 +233,7 @@ brain-axi today
 brain-axi week
 brain-axi agenda --from 2026-09-01 --to 2026-09-07
 brain-axi ideas --status pending --stale 14d
+brain-axi links --stale 14d
 brain-axi tasks
 brain-axi tasks --assignee platform-team
 brain-axi tasks --overdue
@@ -242,6 +254,14 @@ brain-axi brief
 - `tasks` rows carry a due date and a follow-up flag. `unchecked-28d` means nobody has looked at it
   in 28 days and its horizon has passed. Say that out loud, and say who has it. That line is the
   entire point of the record kind.
+- `links` rows carry an **age** and the address. One past its nudge horizon is the
+  "may be u miss this link" list - say so, and say the address. A link is deleted with
+  `rm <id> --yes`, never marked done.
+- When the user asks whether a saved link covers something, pull keywords out of their question
+  and `search` each: the address ranks with the title, so a domain or a phrase from the
+  description both hit, most relevant first. `show` the top one or two hits to confirm, and
+  `related <id>` to follow whatever they point at. Do not dump the whole `links` shelf unless
+  the search finds nothing - ranking is the mechanism, listing everything is the fallback.
 - `today` and `week` carry a `tasks` block beside `events` when anything is due, overdue or
   unchecked. Read both.
 - `brief` is the brain section for a session brief: today, what is coming due, `due_tasks`,
@@ -290,7 +310,7 @@ brain-axi update migrate-staging-db --status waiting
 brain-axi rm customer-referral --yes
 ```
 
-- `done` sets an event to `done`, a task to `done`, and an idea to `shipped`.
+- `done` sets an event to `done`, a task to `done`, and an idea to `shipped`. A link has no status, so `done` refuses it.
 - `ship <id> --pr <url> --merged-at <timestamp>` records that the work landed and moves the status
   with it. `--merged-at` must carry an explicit UTC offset: it is what every period report counts
   from, so a naive value would put the merge in the wrong month.

@@ -183,7 +183,7 @@ It is not in the specification's illustrative examples, but the `ideas[n]{id,tit
 
 Closed and fixed.
 An open vocabulary means the query layer can never make a confident statement about what is outstanding.
-A note, a person and a daily file carry no status at all, and a status on one of them is a parse error.
+A note, a person, a daily file and a link carry no status at all, and a status on one of them is a parse error.
 
 ### `add note` and the daily file
 
@@ -227,6 +227,28 @@ in that column would make the `events` contract mean two different things. Overd
 past-horizon tasks are not clipped to the query's window - a deadline does not stop mattering
 because the week moved on, and a delegated thing nobody has checked in three weeks has to be
 impossible to miss rather than visible only on the day it was due.
+
+### `link`, and why the tool never fetches it
+
+A saved link is **a bookmark with the user's own description**: the address plus what it is for, so
+"may be u miss this link" stays answerable later without reopening a browser history. It is a new
+record kind rather than an idea carrying a URL, because a URL on an idea would be a second meaning
+for a field the query layer already reads another way.
+
+The tool never fetches the address, and that is structural rather than cautious. Fetching would make
+a read command open a socket, which NFR-2 forbids, and would turn a save into something that fails
+on a plane. `url:` is validated as an openable address - `http` or `https` with a host - and nothing
+more; what the page says is the user's description, written at save time.
+
+A link carries no status. There is deliberately nothing to complete: no saved/read/archived
+lifecycle, no `done`. The kind owns three verbs - save it, show it, delete it outright - and the
+decay mechanism is the same one an idea's is, through the same `vault.Horizon`: `nudge_after:` with
+the vault default behind it, and a `touched:` date the capture sets. Because a link never closes, it
+keeps resurfacing past its horizon until `rm --yes` removes it; `update --status` and `done` refuse
+it loudly rather than pretending otherwise. `links` is the listing, with a `--stale` shape matching
+`ideas`, and its attention lines are the missed-link list. The board, the recap, `due`, `brief` and
+the batch ingest do not know this kind yet; that is a deliberate v1 boundary, not an oversight - a
+bookmark nobody can list, search and be reminded of is already the whole feature.
 
 ## Batch ingest and the confirmation gate
 
@@ -979,6 +1001,7 @@ Every FR and NFR, and where it lives.
 | FR-21 | `internal/vault/record.go` `parseFleetFields`/`ValidateFleetTaskID`; `cmd/brain-axi/forge.go` `cmdLinkFleet`/`cmdShip`; `internal/query/query.go` `Shipped` |
 | FR-22 | `internal/board/board.go`; `templates/board.html`; `internal/payload`; `cmd/brain-axi/surfaces.go` `cmdBoard` |
 | FR-23 | `internal/recap/recap.go`; `templates/recap.html`; `cmd/brain-axi/surfaces.go` `cmdRecap`; `internal/timeref/timeref.go` `MonthStartAfter`/`QuarterStartAfter` |
+| FR-24 | `internal/vault/record.go` `KindLink`/`LinkStatuses`/`parseURLField`/`ValidateURL`; `internal/vault/init.go` `BuildLink`; `internal/query/query.go` `SavedLinks`; `cmd/brain-axi/capture.go` `addLink`; `cmd/brain-axi/recall.go` `cmdLinks` |
 | NFR-1 | The parallel walk in `internal/vault/store.go`; asserted by `TestQueryLatencyOnFiveThousandFiles`, which measures `today`, `tasks`, `due` and the board's assembly |
 | NFR-2 | One Go binary, `time/tzdata` embedded, no network client linked and no token held. Delegation only: `git` for a checkout self-upgrade, `curl`/`wget` for a release one, `gh`/`glab` for forge status and for `recap --verify-forge`, each behind an explicit command. The board and the recap write a file and serve nothing. Asserted by `TestOfflineCommandsNeverReachAForge` and `TestRecapReachesNothingWithoutVerifyForge` |
 | NFR-3 | `internal/vault/store.go` `WriteFile` |

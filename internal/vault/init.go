@@ -34,6 +34,7 @@ no index. Every file is readable and editable with a text editor or Obsidian, wi
 - ` + "`notes/`" + ` standalone notes.
 - ` + "`people/`" + ` who the events are with.
 - ` + "`daily/`" + ` one file per day; ` + "`brain-axi add note`" + ` appends here.
+- ` + "`links/`" + ` saved links: a ` + "`url:`" + ` plus a description, with a ` + "`touched:`" + ` date so an unread one can resurface.
 - ` + "`.brain/config.yml`" + ` timezone and first day of the week.
 
 This directory is its own git repository, and is invisible to the tool's repository. An upgrade of
@@ -347,6 +348,59 @@ func (v *Vault) BuildNote(n NewNote) (string, *frontmatter.Doc, error) {
 		doc.SetStrings("tags", n.Tags)
 	}
 	if err := setLinkKeys(doc, KindNote, n.ID, n.Links, n.RaiseWith); err != nil {
+		return "", nil, err
+	}
+	return rel, doc, nil
+}
+
+// NewLink is a new saved link's fields. A link is a bookmark with a
+// description the user wrote themselves: the address plus what it is for, so
+// "may be u miss this link" stays answerable later without reopening a browser
+// history. The tool never fetches the address; it stores it.
+//
+// A link carries no status: there is nothing to complete, only something to
+// keep until it is deleted outright.
+type NewLink struct {
+	ID         string
+	Title      string
+	URL        string
+	NudgeAfter timeref.Span
+	HasNudge   bool
+	Body       string
+	Created    timeref.Date
+	Tags       []string
+	Links      []string
+	RaiseWith  []string
+}
+
+// BuildLink renders a new saved link into a path and a document.
+func (v *Vault) BuildLink(l NewLink) (string, *frontmatter.Doc, error) {
+	if err := ValidateID(l.ID); err != nil {
+		return "", nil, err
+	}
+	if err := ValidateURL(l.URL); err != nil {
+		return "", nil, err
+	}
+	pairs := [][2]string{
+		{"type", string(KindLink)},
+		{"id", l.ID},
+		{"title", l.Title},
+		{"url", l.URL},
+		{"created", l.Created.String()},
+		{"touched", l.Created.String()},
+	}
+	rel, err := v.FreePath(filepath.Join(LinksDir, unitext.SlugN(l.ID, 80)+".md"))
+	if err != nil {
+		return "", nil, err
+	}
+	doc := frontmatter.New(rel, bodyOf(l.Body), pairs...)
+	if l.HasNudge {
+		doc.Set("nudge_after", l.NudgeAfter.String())
+	}
+	if len(l.Tags) > 0 {
+		doc.SetStrings("tags", l.Tags)
+	}
+	if err := setLinkKeys(doc, KindLink, l.ID, l.Links, l.RaiseWith); err != nil {
 		return "", nil, err
 	}
 	return rel, doc, nil

@@ -1,0 +1,6 @@
+added: link
+id: a-good-read
+path: links/a-good-read.md
+title: a good read
+url: https://example.com/a-good-read
+help[1]: Run `brain-axi show a-good-read` to check it

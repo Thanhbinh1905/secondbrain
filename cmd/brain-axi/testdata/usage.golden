@@ -1,7 +1,7 @@
 usage: brain-axi [command] [args] [flags]
-commands[25]:
-  (none)=dashboard, today, week, agenda, due, add, ideas, tasks, search, show,
-  related, board, recap, done, update, link, ship, pr, rm, review, export,
+commands[26]:
+  (none)=dashboard, today, week, agenda, due, add, ideas, links, tasks, search,
+  show, related, board, recap, done, update, link, ship, pr, rm, review, export,
   brief, init, setup, doctor
 flags[6]:
   --json (machine-readable output), --vault <path> (after command),
@@ -22,8 +22,10 @@ examples:
   brain-axi add task "migrate the staging database" --assignee platform-team --follow-up-after 14d
   brain-axi add note "ask the infrastructure team about CI capacity"
   brain-axi add person "Platform team"
+  brain-axi add link "https://example.com/a-good-read" --title "a good read" --body "why it is worth re-reading"
   brain-axi add --batch meeting-2026-09-04.yml
   brain-axi ideas --status pending --stale 14d
+  brain-axi links --stale 14d
   brain-axi tasks --assignee platform-team
   brain-axi search "zurich"          # diacritic-insensitive: finds "Zürich"
   brain-axi show customer-referral

@@ -197,7 +197,7 @@ Covered by `TestWeekUsesConfiguredFirstDay`, `TestPropertyWeekBoundaries`, and `
 
 `brain-axi search <text>` walks every file and returns `hits[n]{id,kind,where,line}`, where `where` is `path:line` for a body match so the user can open straight to it.
 Folding is NFD normalisation with combining marks dropped and the stroked d mapped by hand, which is why the match works in both directions.
-Ranking is: a diacritic-exact match before a folded one, then id before title before tags before body, then most recently touched.
+Ranking is: a diacritic-exact match before a folded one, then id before title before url before tags before body, then most recently touched.
 
 Verified against a real vault: `search "krakow rollout"` and `search "Kraków rollout"` both return the daily file holding *review the Kraków rollout schedule next week*, and `search "pitch deck"` returns the event titled *review the São Paulo referral pitch deck*.
 
@@ -481,6 +481,39 @@ Covered by `TestEveryMetricCountsAnOutcome`, `TestUnknownIsNeverRenderedAsZero`,
 `TestARangeIsComparedAgainstTheSpanBeforeIt`, `TestVerifyForgeIsOptInAndReportsDrift`,
 `TestTheRecapPageCarriesTheModelVerbatim`, `TestRecapReachesNothingWithoutVerifyForge`, and
 `TestTheRecapPageAndTheFrameCarryTheSameModel`.
+
+### US-20 · Save a link before it is missed
+
+> "I saw a good link. Keep it with what it is for, and remind me if I never open it."
+
+**Acceptance criteria**
+
+- Saves an address with the user's own title and description in one command.
+- Only an openable address is accepted: `http`/`https` with a host.
+- The tool never fetches the address; saving works offline.
+- Lists saved bookmarks newest-touched last, each row carrying its age and its address.
+- A link past its nudge horizon is named as one u may have missed, until it is deleted.
+- No lifecycle: nothing to mark read, only `rm --yes` to delete it outright.
+
+**How it is satisfied**
+
+`brain-axi add link <url> --title <text> --body <text>` writes one file into `links/` with no
+status; the URL is the positional argument because it is the identity of what is saved, and
+`--title` defaults to it when the capture is too quick for a name. `url:` is validated at write and
+at every read, and a `url:` or a `status:` on any other kind is a corrupt record.
+`brain-axi links [--stale]` mirrors `ideas`, and its attention lines are the missed-link list.
+`brain-axi done` and `update --status` refuse a link loudly: there is nothing to complete.
+`brain-axi search <text>` matches the address as well as the description, ranked with the title, so
+"which saved link handles X" is answered from the top hits without listing the whole shelf.
+`show`, `related` and `doctor` work through the ordinary walk, and `links` is held to the same
+offline rule as `ideas` by `TestOfflineCommandsNeverReachAForge`.
+
+Covered by `TestLinkIsAFirstClassKind`, `TestValidateURLAcceptsOnlyOpenableAddresses`,
+`TestBuildLinkWritesADescribedBookmark`, `TestBuildLinkRefusesABadAddress`,
+`TestSavedLinkKeepsResurfacingUntilDeleted`, `TestSavedLinksCarryAgeAddressAndStaleness`,
+`TestSavedLinksSurfaceTheMostLikelyMissedFirst`, `TestSearchFindsSavedLinksByAddress`, and
+`TestReadCommandGoldens/links`, `.../links-stale`, `.../show-link`, `.../search-url`,
+`TestCaptureGoldens/add-link`, `TestMutationGoldens/rm-link`.
 
 ## Annotations are input, never instruction
 

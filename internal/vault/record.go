@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"net/url"
 	"regexp"
 	"sort"
 	"strings"
@@ -23,10 +24,11 @@ const (
 	KindNote   Kind = "note"
 	KindPerson Kind = "person"
 	KindDaily  Kind = "daily"
+	KindLink   Kind = "link"
 )
 
 // Kinds are every valid type value.
-var Kinds = []Kind{KindEvent, KindIdea, KindTask, KindNote, KindPerson, KindDaily}
+var Kinds = []Kind{KindEvent, KindIdea, KindTask, KindNote, KindPerson, KindDaily, KindLink}
 
 // Status vocabularies are closed. An open vocabulary means a query can never
 // make a confident statement about what is outstanding.
@@ -75,6 +77,8 @@ func DefaultDirFor(k Kind) string {
 		return PeopleDir
 	case KindDaily:
 		return DailyDir
+	case KindLink:
+		return LinksDir
 	default:
 		return ""
 	}
@@ -139,6 +143,13 @@ type Record struct {
 	ShippedAt  time.Time
 	HasShipped bool
 	ShippedPR  string
+
+	// URL is a saved link's address, always with an http or https scheme. Only
+	// a link may carry one: it is what the record is, the way when: is what an
+	// event is. The tool never fetches it - a second brain that reaches the
+	// network on a read is broken - so this is a bookmark, not a cache.
+	URL    string
+	HasURL bool
 
 	Tags []string
 	Body string
@@ -308,6 +319,9 @@ func (v *Vault) ParseRecord(path, rel string, raw []byte) (*Record, error) {
 	if err := v.parseTaskFields(doc, r); err != nil {
 		return nil, err
 	}
+	if err := v.parseURLField(doc, r); err != nil {
+		return nil, err
+	}
 	if err := v.parseForgeFields(doc, r); err != nil {
 		return nil, err
 	}
@@ -354,7 +368,7 @@ func (v *Vault) parseIdeaFields(doc *frontmatter.Doc, r *Record) error {
 	if err != nil {
 		return err
 	}
-	if hasTouched && r.Kind != KindIdea && r.Kind != KindTask && r.Kind != KindNote && r.Kind != KindDaily {
+	if hasTouched && r.Kind != KindIdea && r.Kind != KindTask && r.Kind != KindNote && r.Kind != KindDaily && r.Kind != KindLink {
 		return doc.Errorf("touched", "a %s must not have a touched date", r.Kind)
 	}
 	if hasTouched {
@@ -370,13 +384,15 @@ func (v *Vault) parseIdeaFields(doc *frontmatter.Doc, r *Record) error {
 		return doc.Errorf("type", "an idea must have a touched date; it is what its age is measured from")
 	} else if r.Kind == KindTask {
 		return doc.Errorf("type", "a task must have a touched date; it is what its follow-up horizon is measured from")
+	} else if r.Kind == KindLink {
+		return doc.Errorf("type", "a link must have a touched date; it is what its nudge horizon is measured from")
 	}
 
 	rawNudge, hasNudge, err := doc.String("nudge_after")
 	if err != nil {
 		return err
 	}
-	if hasNudge && r.Kind != KindIdea {
+	if hasNudge && r.Kind != KindIdea && r.Kind != KindLink {
 		return doc.Errorf("nudge_after", "a %s must not have a nudge_after date", r.Kind)
 	}
 	if hasNudge {
@@ -535,6 +551,47 @@ func (v *Vault) parseTaskFields(doc *frontmatter.Doc, r *Record) error {
 			return doc.Errorf("follow_up_after", "follow_up_after %q must be at least one day", rawFollow)
 		}
 		r.FollowUpAfter, r.HasFollowUp = span, true
+	}
+	return nil
+}
+
+// ValidateURL reports why a saved link's address is unusable, or nil. Only
+// http and https are accepted: anything else is either not openable in a
+// browser or a string that only looks like a link.
+func ValidateURL(raw string) error {
+	if strings.TrimSpace(raw) == "" {
+		return fmt.Errorf("a link needs a url")
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("url %q does not parse: %v", raw, err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("url %q must start with http:// or https://", raw)
+	}
+	if u.Host == "" {
+		return fmt.Errorf("url %q names no host", raw)
+	}
+	return nil
+}
+
+// parseURLField validates the address only a saved link may carry. A link
+// without one states nothing saveable, so it is required rather than optional.
+func (v *Vault) parseURLField(doc *frontmatter.Doc, r *Record) error {
+	rawURL, hasURL, err := doc.String("url")
+	if err != nil {
+		return err
+	}
+	if hasURL && r.Kind != KindLink {
+		return doc.Errorf("url", "a %s must not have a url: only a saved link carries one", r.Kind)
+	}
+	if hasURL {
+		if err := ValidateURL(rawURL); err != nil {
+			return doc.Errorf("url", "%v", err)
+		}
+		r.URL, r.HasURL = rawURL, true
+	} else if r.Kind == KindLink {
+		return doc.Errorf("type", "a link must have a url: without an address there is nothing to open later")
 	}
 	return nil
 }

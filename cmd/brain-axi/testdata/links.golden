@@ -1,0 +1,5 @@
+links[1]{id,title,url,age}:
+  read-later-rfc-5545, "read later, rfc 5545 section 3", https://datatracker.ietf.org/doc/html/rfc5545#section-3, 1d
+help[2]:
+  - Run `brain-axi show <id>` for the link's description
+  - Run `brain-axi rm <id> --yes` to delete it outright
