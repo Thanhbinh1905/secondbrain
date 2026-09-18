@@ -1,4 +1,4 @@
-// Package templates embeds the two HTML surfaces this tool writes.
+// Package templates embeds the HTML surfaces this tool writes.
 //
 // The embed lives here, beside the files, so the tracked HTML is the only copy
 // (the same reason skills/embed.go sits beside the skill). A second copy under
@@ -6,8 +6,8 @@
 // contributor edits.
 //
 // The Markdown files in this directory are documentation rather than code:
-// they show the shape of every record `brain-axi add` writes. The two HTML
-// files are code, and are the only place board and recap markup exists.
+// they show the shape of every record `brain-axi add` writes. The HTML files
+// are code, and are the only place their surface markup exists.
 package templates
 
 import (
@@ -25,6 +25,12 @@ var Board string
 //
 //go:embed recap.html
 var Recap string
+
+// Ideas is the committed ideas review template. It follows the same one-slot,
+// validated-payload contract as Board and Recap.
+//
+//go:embed ideas.html
+var Ideas string
 
 // DataSlot is the line each template carries exactly once, and the only thing
 // a renderer replaces.

@@ -1016,7 +1016,8 @@ func TestOfflineCommandsNeverReachAForge(t *testing.T) {
 	}})
 	commands := [][]string{
 		{"today"}, {"week"}, {"agenda", "--from", "2026-09-01", "--to", "2026-09-30"},
-		{"ideas"}, {"tasks"}, {"search", "capacity"}, {"brief"}, {"show", "migrate-staging-db"},
+		{"ideas"}, {"ideas", "--html", filepath.Join(t.TempDir(), "ideas.html")},
+		{"tasks"}, {"search", "capacity"}, {"brief"}, {"show", "migrate-staging-db"},
 		{"links"}, {"show", "read-later-rfc-5545"},
 		{"export", "ics"}, {"review", "--json"}, {"pr"}, nil,
 		// Round three's read commands are held to the same rule: a linked

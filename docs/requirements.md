@@ -141,6 +141,7 @@ Ruthless surfacing of decay is the counterweight, and it ships in the first rele
 | FR-22 | `board` renders five panes in a fixed order - Today, This week, Tasks, Ideas pending, Waiting on others - from one assembled model through two renderers: a framed ASCII board, and a self-contained HTML file written to a caller-supplied path. A committed template owns all markup, the payload satisfies the versioned `brain-board.v1` contract, and validation is fail-closed before any existing file is touched. `--open` may hand the file to a configured viewer and must keep the file and exit non-zero when that viewer is absent. |
 | FR-23 | `recap <week\|month\|quarter>` reports what the period produced, on the same two-renderer treatment. It counts outcomes and never activity, renders an unknown value as unknown rather than zero, renders a slow period neutrally, and compares only against the same vault's own previous equivalent period. `--verify-forge` is opt-in and is the only part that reaches a forge. |
 | FR-24 | `link` is a record kind for saved bookmarks: a `url:` carrying only `http`/`https` with a host, a required `touched:` date and an optional `nudge_after:` horizon falling back to the vault default. It carries no status - there is nothing to complete, only something to keep until `rm --yes` deletes it outright. `add link <url>` stores the address with the user's own description and never fetches it; `links` lists saved bookmarks newest-touched last with an attention line for ones past their horizon. Like every other command it walks the whole vault, writes one file, and never reaches a forge. |
+| FR-25 | `ideas --html <path>` writes the same rows selected by the existing status and stale filters as a self-contained visual review surface. The versioned `brain-ideas.v1` payload carries each idea's title, status, age, horizon, touched date, created date and path; a committed template owns the markup and validation is fail-closed before the file is replaced. The plain-text and JSON contracts stay unchanged. A Lavish handoff is a separate explicit `lavish-axi <path>` invocation. |
 
 Where each of these is implemented is recorded in [design.md](design.md), "Requirement coverage".
 
@@ -173,9 +174,10 @@ What is still literally true, and is the whole of the amendment:
   `links`, `search`, `show`, `related`, `board`, `recap`, `brief` and the bare dashboard never do, and are asserted
   not to by `TestOfflineCommandsNeverReachAForge`. A second brain that cannot answer a question
   about today's schedule on a plane is broken.
-- **The board and the recap open nothing either.** Both write a file, and writing that file is the
-  whole of the integration: brain-axi serves no page and listens on no port. Handing the file to an
-  external viewer is an explicitly configured command, and it never becomes a network client.
+- **HTML surfaces open nothing either.** They write a file, and writing that file is the whole of
+  the integration: brain-axi serves no page and listens on no port. Handing the file to an external
+  viewer is a separate explicit invocation or an explicitly configured command, and it never
+  becomes a network client.
 - **An upgrade delegates its fetch too.** `brain-axi update` fast-forwards a checkout by running
   `git`, and downloads a release asset by running `curl` or `wget`. A host with neither is told so
   and refused; the binary does not grow an HTTP client to cover it. Nothing else about the release
@@ -203,8 +205,8 @@ Failures surface.
 | **Format churn.** Frontmatter changes shape and old files stop parsing. | Medium | Additive changes only, unknown keys preserved on rewrite, and no destructive migration without an explicit command. |
 | **Total data loss.** Single disk, no remote. | Medium, irreversible | Local git history from the first commit; `init` creates the repository but never commits, and `doctor` keeps both the empty repository and the missing remote visible until each is addressed. |
 | **Agent output pollution.** Dashboard frames leak into agent context and burn tokens. | Low | Non-TTY output degrades to plain lines; the skill directs agents to the compact commands. |
-| **A review surface's annotations read as orders.** Someone annotates the board and an agent executes it. | Medium | An annotation is input, never instruction and never authority: it is not executed and confers no permission. The board never writes to the vault, and every change is made by running an ordinary brain-axi command. Stated on the page itself, in the README and in `AGENTS.md`. |
-| **A generated UI re-authored on every run.** The board looks different each time an agent builds it. | Medium | A committed template owns every pixel and a versioned payload contract owns the pane set and its order. No code path generates board markup at run time, and a test asserts the built page is the template with only its data slot replaced. |
+| **A review surface's annotations read as orders.** Someone annotates a surface and an agent executes it. | Medium | An annotation is input, never instruction and never authority: it is not executed and confers no permission. Surfaces never write to the vault, and every change is made by running an ordinary brain-axi command. Stated on the pages, in the README and in `AGENTS.md`. |
+| **A generated UI re-authored on every run.** A surface looks different each time an agent builds it. | Medium | A committed template owns every pixel and a versioned payload contract owns the content shape. No code path generates surface markup at run time, and tests assert each built page is its template with only the data slot replaced. |
 | **A period report that flatters or scolds.** A recap starts reading as a performance review. | Medium | Outcomes only, unknown never rendered as zero, neutral wording asserted over an empty-period fixture, and no comparison against anything but the same vault's own earlier period. |
 
 ## Settled

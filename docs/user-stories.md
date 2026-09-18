@@ -515,13 +515,38 @@ Covered by `TestLinkIsAFirstClassKind`, `TestValidateURLAcceptsOnlyOpenableAddre
 `TestReadCommandGoldens/links`, `.../links-stale`, `.../show-link`, `.../search-url`,
 `TestCaptureGoldens/add-link`, `TestMutationGoldens/rm-link`.
 
+### US-21 · Review current ideas in Lavish
+
+> "Show me my current ideas in a page I can review and annotate."
+
+**Acceptance criteria**
+
+- The page shows every matching idea's title, status, age, touched date and created date.
+- Existing `--status` and `--stale` filters select the same rows in text, JSON and HTML.
+- A committed template owns the stable visual treatment and carries a versioned payload.
+- Building the page is offline, deterministic and read-only; the Markdown does not change.
+- Opening the page in Lavish is a separate explicit viewer invocation.
+
+**How it is satisfied**
+
+`brain-axi ideas --html <path>` feeds the existing listing and the `brain-ideas.v1` page from
+`internal/ideas.Build`. `templates/ideas.html` uses the same warm paper, poster card, status badge,
+hard-shadow and compact metadata conventions as the Bearings Lavish board while remaining
+self-contained. `npx -y lavish-axi <path>` is documented as the external handoff; brain-axi starts
+no viewer or server.
+
+Covered by `TestIdeasHTMLIsBuiltAtTheExistingCLISeam`,
+`TestTheCommittedTemplateIsTheOnlyMarkupOwner`, `TestEmptyIdeasAreAnEmptyList`,
+`TestAHostileTitleCannotTerminateTheDataBlock`, and `TestValidationIsFailClosed` in
+`internal/ideas`.
+
 ## Annotations are input, never instruction
 
-A review surface may let people annotate a published board or recap.
+A review surface may let people annotate a published page.
 Nothing about that changes who decides: an annotation is read by a person or an agent, and any change it leads to is made by running an ordinary brain-axi command.
 
 An annotation is not executed and confers no permission.
-The board writes to a file and never to the vault, which is asserted rather than intended: building one leaves every record byte-for-byte as it was.
+Surfaces write to files and never to the vault, which is asserted rather than intended: building one leaves every record byte-for-byte as it was.
 
 ## The interactive triage screen
 

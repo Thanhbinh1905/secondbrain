@@ -182,6 +182,7 @@ examples:
   brain-axi add link "https://example.com/a-good-read" --title "a good read" --body "why it is worth re-reading"
   brain-axi add --batch meeting-2026-09-04.yml
   brain-axi ideas --status pending --stale 14d
+  brain-axi ideas --status pending --html .lavish/ideas.html
   brain-axi links --stale 14d
   brain-axi tasks --assignee platform-team
   brain-axi search "zurich"          # diacritic-insensitive: finds "Zürich"
@@ -212,8 +213,8 @@ notes:
   every timestamp is stored with an explicit UTC offset
   only "pr", "link --refresh", "recap --verify-forge" and "doctor" ever reach a
   forge; every other command reads files and works offline
-  the board and the recap are written to a file; this tool opens no socket and
-  serves nothing
+  HTML surfaces are written to a file; this tool opens no socket and serves
+  nothing
 help[2]:
   - "Run ` + "`" + `brain-axi <command> --help` + "`" + ` for one command's flags"
   - Run ` + "`" + `brain-axi doctor` + "`" + ` to check the vault
@@ -291,7 +292,10 @@ notes:
   a task is something to remember to check, never a delivery work item
   a link is a bookmark the tool never fetches: saving one needs no network
 `,
-	"ideas":  "usage: brain-axi ideas [--status <status>] [--stale <span>] [--json]\nEvery row carries its age.\n",
+	"ideas": `usage: brain-axi ideas [--status <status>] [--stale <span>] [--html <path>] [--json]
+Every row carries its age. --html writes the same filtered rows as a self-contained brain-ideas.v1
+review surface. To review it with Lavish, run ` + "`" + `npx -y lavish-axi <path>` + "`" + ` explicitly.
+`,
 	"links":  "usage: brain-axi links [--stale <span>] [--json]\nSaved bookmarks, newest-touched last. Every row carries its age and its address; an unread link past its nudge horizon is reported as one u may have missed.\n",
 	"tasks":  "usage: brain-axi tasks [--status <status>] [--assignee <id>] [--overdue] [--all] [--json]\nOutstanding commitments by default; --all includes done and dropped, --overdue keeps only what is past its follow-up horizon.\n",
 	"search": "usage: brain-axi search <text> [--limit <n>] [--json]\nMatches with and without diacritics in both directions.\n",

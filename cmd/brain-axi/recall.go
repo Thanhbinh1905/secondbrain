@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	ideasurface "github.com/Thanhbinh1905/secondbrain/internal/ideas"
+	"github.com/Thanhbinh1905/secondbrain/internal/payload"
 	"github.com/Thanhbinh1905/secondbrain/internal/query"
 	"github.com/Thanhbinh1905/secondbrain/internal/render"
 	"github.com/Thanhbinh1905/secondbrain/internal/timeref"
@@ -310,28 +312,40 @@ func (a *app) cmdIdeas() error {
 	if err != nil {
 		return err
 	}
-	rows, err := a.engine().Ideas(query.IdeaFilter{
+	model, err := ideasurface.Build(a.engine(), query.IdeaFilter{
 		Status: a.flagOr("status", ""), Stale: stale, HasStale: hasStale,
 	})
 	if err != nil {
 		return err
 	}
-	jsonRows := make([]ideaRow, 0, len(rows))
-	for _, r := range rows {
-		touched := r.Record.Created.String()
-		if r.Record.HasTouched {
-			touched = r.Record.Touched.String()
+	if a.has("html") {
+		path, err := vault.ExpandHome(strings.TrimSpace(a.flagOr("html", "")))
+		if err != nil {
+			return usageError("%v", err)
 		}
-		row := ideaRow{
-			ID: r.Record.ID, Title: r.Record.Title, Status: r.Record.Status,
+		if path == "" {
+			return usageError("--html needs a path")
+		}
+		page, err := ideasurface.RenderHTML(model)
+		if err != nil {
+			return err
+		}
+		if err := payload.WriteFile(path, page); err != nil {
+			return err
+		}
+	}
+
+	// Keep the established JSON envelope and omission rules unchanged. The
+	// versioned HTML model is the assembly source; this is only its legacy
+	// command representation.
+	jsonRows := make([]ideaRow, 0, len(model.Ideas))
+	for _, r := range model.Ideas {
+		jsonRows = append(jsonRows, ideaRow{
+			ID: r.ID, Title: r.Title, Status: r.Status,
 			AgeDays: r.AgeDays, HorizonDays: r.HorizonDays, PastHorizon: r.PastHorizon,
-			Created: r.Record.Created.String(), Touched: touched, Path: r.Record.Rel,
-		}
-		if r.Record.HasShipped {
-			row.ShippedAt = timeref.Format(r.Record.ShippedAt)
-			row.ShippedPR = r.Record.ShippedPR
-		}
-		jsonRows = append(jsonRows, row)
+			Created: r.Created, Touched: r.Touched, ShippedAt: r.ShippedAt,
+			ShippedPR: r.ShippedPR, Path: r.Path,
+		})
 	}
 	if a.out.JSON {
 		return a.out.Emit(map[string]any{"now": timeref.Format(a.now), "ideas": jsonRows})
@@ -342,7 +356,7 @@ func (a *app) cmdIdeas() error {
 		Empty:   "no ideas match",
 	}
 	var attention []string
-	for _, r := range jsonRows {
+	for _, r := range model.Ideas {
 		block.Rows = append(block.Rows, []string{
 			r.ID, r.Title, r.Status, strconv.Itoa(r.AgeDays) + "d", r.Touched,
 		})
