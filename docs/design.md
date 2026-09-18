@@ -43,13 +43,14 @@ Each layer is replaceable: a different agent, a different CLI, even a human with
     internal/payload/       inject one validated JSON payload into a committed template
     internal/board/         the five-pane board: one model, two renderers
     internal/recap/         what a period produced: one model, two renderers
+    internal/ideas/         the filtered ideas review: one model, text/json/html
     internal/render/        axi text · json · dashboard frame
     internal/review/        the interactive triage screen
     internal/ics/           one-way RFC 5545 export
     internal/skill/         installs the tracked skill
     skills/secondbrain/     agent-facing skill, tracked and embedded
-    templates/              the shape of each record type as documentation, plus
-                            board.html and recap.html, which are code
+    templates/              record shapes as documentation, plus committed HTML
+                            surface templates, which are code
     docs/
     install.sh
     vault/                  GITIGNORED - your brain, its own git repo
@@ -504,17 +505,18 @@ The same instant is then stored in the vault zone with its offset explicit, like
 It is the one date in the vault that says when work actually landed, and a naive value there would
 silently place a merge in the wrong period.
 
-## The board and the recap
+## HTML review surfaces
 
-Both surfaces are built the same way, and the shape is the point: it is what stops an agent
-re-authoring the UI on every run.
+The board, recap and ideas review are built the same way. The shape stops an agent re-authoring the
+UI on every run.
 
-**One assembly path.** `board.Build` and `recap.Build` are the only places their contents are
-decided. Both renderers take the result unchanged, and the HTML page carries the model verbatim, so
-the framed and the published views cannot disagree.
+**One assembly path.** `board.Build`, `recap.Build` and `ideas.Build` are the only places their
+contents are decided. Every renderer takes the result unchanged, and each HTML page carries its
+model verbatim. `ideas.Build` also feeds the established plain-text and JSON representations, so
+adding `ideas --html` cannot change which filtered rows those formats report.
 
-**A committed template owns the markup.** `templates/board.html` and `templates/recap.html` own
-layout, styling, pane order and every empty-state string, and are embedded from where they live
+**A committed template owns the markup.** `templates/board.html`, `templates/recap.html` and
+`templates/ideas.html` own their layout and styling and are embedded from where they live
 (`templates/embed.go`) so there is one tracked copy. A renderer substitutes one JSON payload for the
 template's single `__BRAIN_AXI_DATA__` slot and generates nothing else; a test asserts the built
 page is byte-for-byte the template with only that line replaced.
@@ -522,7 +524,8 @@ page is byte-for-byte the template with only that line replaced.
 **A versioned data contract.** `brain-board.v1` fixes five panes in one order - Today, This week,
 Tasks, Ideas pending, Waiting on others - with fixed field names and types and its own empty-state
 string per pane, so an empty week renders as an empty week rather than as a missing pane.
-`brain-recap.v1` does the same for six blocks.
+`brain-recap.v1` does the same for six blocks. `brain-ideas.v1` carries the exact status and stale
+filters plus every matching idea's title, status, age, horizon, touched date, created date and path.
 
 **Validation is fail-closed and happens first.** `Validate` refuses a wrong schema, a missing field,
 a wrong type, an unknown pane or a pane with no empty-state string, with `path:line: reason` and
@@ -537,9 +540,10 @@ identical once parsed and a captured note containing `</script>` is inert.
 
 **Writing a file is the entire integration seam.** brain-axi opens no socket and serves nothing. The
 output path is caller-supplied (`--html`, or `board_html:` once) and rewritten in place, so an
-external viewer's URL stays stable. `--open` hands that file to the configured `board_open_cmd`,
-run as a command with the path appended rather than through a shell; a missing or failing viewer is
-reported as itself, exits non-zero, and **keeps** the file that was already written.
+external viewer's URL stays stable. The ideas/Lavish flow keeps the handoff explicit:
+`brain-axi ideas --html .lavish/ideas.html`, then `npx -y lavish-axi .lavish/ideas.html`.
+The board's `--open` hands its file to the configured `board_open_cmd`; a missing or failing viewer
+is reported as itself and **keeps** the file that was already written.
 
 ### What a recap counts, and what it refuses to
 
@@ -1002,8 +1006,9 @@ Every FR and NFR, and where it lives.
 | FR-22 | `internal/board/board.go`; `templates/board.html`; `internal/payload`; `cmd/brain-axi/surfaces.go` `cmdBoard` |
 | FR-23 | `internal/recap/recap.go`; `templates/recap.html`; `cmd/brain-axi/surfaces.go` `cmdRecap`; `internal/timeref/timeref.go` `MonthStartAfter`/`QuarterStartAfter` |
 | FR-24 | `internal/vault/record.go` `KindLink`/`LinkStatuses`/`parseURLField`/`ValidateURL`; `internal/vault/init.go` `BuildLink`; `internal/query/query.go` `SavedLinks`; `cmd/brain-axi/capture.go` `addLink`; `cmd/brain-axi/recall.go` `cmdLinks` |
+| FR-25 | `internal/ideas/ideas.go`; `templates/ideas.html`; `cmd/brain-axi/recall.go` `cmdIdeas` |
 | NFR-1 | The parallel walk in `internal/vault/store.go`; asserted by `TestQueryLatencyOnFiveThousandFiles`, which measures `today`, `tasks`, `due` and the board's assembly |
-| NFR-2 | One Go binary, `time/tzdata` embedded, no network client linked and no token held. Delegation only: `git` for a checkout self-upgrade, `curl`/`wget` for a release one, `gh`/`glab` for forge status and for `recap --verify-forge`, each behind an explicit command. The board and the recap write a file and serve nothing. Asserted by `TestOfflineCommandsNeverReachAForge` and `TestRecapReachesNothingWithoutVerifyForge` |
+| NFR-2 | One Go binary, `time/tzdata` embedded, no network client linked and no token held. Delegation only: `git` for a checkout self-upgrade, `curl`/`wget` for a release one, `gh`/`glab` for forge status and for `recap --verify-forge`, each behind an explicit command. HTML surfaces write a file and serve nothing. Asserted by `TestOfflineCommandsNeverReachAForge` and `TestRecapReachesNothingWithoutVerifyForge` |
 | NFR-3 | `internal/vault/store.go` `WriteFile` |
 | NFR-4 | `internal/frontmatter` error positions; `internal/vault/record.go` validation; exit code 2 |
 | NFR-5 | Plain Markdown with YAML frontmatter, unknown keys preserved, no tool-only files inside record directories |

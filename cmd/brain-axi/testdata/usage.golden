@@ -25,6 +25,7 @@ examples:
   brain-axi add link "https://example.com/a-good-read" --title "a good read" --body "why it is worth re-reading"
   brain-axi add --batch meeting-2026-09-04.yml
   brain-axi ideas --status pending --stale 14d
+  brain-axi ideas --status pending --html .lavish/ideas.html
   brain-axi links --stale 14d
   brain-axi tasks --assignee platform-team
   brain-axi search "zurich"          # diacritic-insensitive: finds "Zürich"
@@ -55,8 +56,8 @@ notes:
   every timestamp is stored with an explicit UTC offset
   only "pr", "link --refresh", "recap --verify-forge" and "doctor" ever reach a
   forge; every other command reads files and works offline
-  the board and the recap are written to a file; this tool opens no socket and
-  serves nothing
+  HTML surfaces are written to a file; this tool opens no socket and serves
+  nothing
 help[2]:
   - "Run `brain-axi <command> --help` for one command's flags"
   - Run `brain-axi doctor` to check the vault

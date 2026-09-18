@@ -63,6 +63,66 @@ func TestTheBoardIsWrittenToAFileAndNothingElse(t *testing.T) {
 	t.Errorf("the page does not say that an annotation is input rather than instruction")
 }
 
+// TestIdeasHTMLIsBuiltAtTheExistingCLISeam fixes the public integration seam:
+// the same filtered ideas query that already feeds text and JSON may also be
+// written as a self-contained Lavish review surface. Writing the page must not
+// change either existing output contract or the Markdown it reads.
+func TestIdeasHTMLIsBuiltAtTheExistingCLISeam(t *testing.T) {
+	root := fixtureVault(t)
+	before := recordSnapshot(t, root)
+	out := filepath.Join(t.TempDir(), "ideas.html")
+	args := []string{"ideas", "--status", "pending", "--stale", "14d"}
+
+	plain := invoke(t, root, "2026-09-02T12:00", false, args...)
+	got := invoke(t, root, "2026-09-02T12:00", false, append(args, "--html", out)...)
+	if got.Code != exitOK {
+		t.Fatalf("exit %d: %s", got.Code, got.Stderr)
+	}
+	if got.Stdout != plain.Stdout {
+		t.Errorf("--html changed the plain ideas contract:\n--- without ---\n%s--- with ---\n%s", plain.Stdout, got.Stdout)
+	}
+
+	jsonArgs := append(append([]string{}, args...), "--json")
+	jsonOnly := invoke(t, root, "2026-09-02T12:00", false, jsonArgs...)
+	jsonWithHTML := invoke(t, root, "2026-09-02T12:00", false, append(jsonArgs, "--html", out)...)
+	if jsonWithHTML.Code != exitOK {
+		t.Fatalf("json exit %d: %s", jsonWithHTML.Code, jsonWithHTML.Stderr)
+	}
+	if jsonWithHTML.Stdout != jsonOnly.Stdout {
+		t.Errorf("--html changed the JSON ideas contract:\n--- without ---\n%s--- with ---\n%s", jsonOnly.Stdout, jsonWithHTML.Stdout)
+	}
+	if after := recordSnapshot(t, root); after != before {
+		t.Error("building the ideas surface changed the vault")
+	}
+
+	page, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("the command did not write its requested ideas surface: %v", err)
+	}
+	text := string(page)
+	for _, want := range []string{
+		`"schema": "brain-ideas.v1"`,
+		`"status": "pending"`,
+		`"stale": "14d"`,
+		`"id": "customer-referral"`,
+		`data-lavish-surface="brain-ideas.v1"`,
+		`--texture-paper:`,
+		`input, never instruction`,
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the ideas surface is missing %q", want)
+		}
+	}
+	if strings.Contains(text, `"id": "shared-vault"`) {
+		t.Error("the HTML surface ignored the requested stale filter")
+	}
+	for _, forbidden := range []string{"<script src=", "@import", "<link rel=\"stylesheet\"", "https://fonts", "url(https://"} {
+		if strings.Contains(text, forbidden) {
+			t.Errorf("the ideas surface is not offline and self-contained: it carries %q", forbidden)
+		}
+	}
+}
+
 // TestBoardJSONHasOneShape: an agent parsing this command parses one envelope
 // whether or not a file was written.
 func TestBoardJSONHasOneShape(t *testing.T) {

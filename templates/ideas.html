@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>brain-axi ideas</title>
+<style>
+/* This committed template owns every pixel of the ideas surface. Its warm
+   paper, poster cards, enamel badges, hard shadows and compact mono metadata
+   follow the stable visual conventions used by the Bearings Lavish board,
+   without depending on Firstmate code or remote assets. */
+:root {
+  --rust-700: #8f2f17; --rust-600: #a93a1f; --rust-500: #c0452a; --rust-050: #fbece3;
+  --navy-700: #1a2238; --navy-500: #2a3656; --navy-100: #d9deea;
+  --gold-600: #b5791c; --gold-500: #e0a52e; --gold-100: #f8ecc9;
+  --ocean-600: #2f6688; --ocean-500: #3c7ea6; --ocean-050: #e8f1f5;
+  --sea-700: #234e3a; --sea-500: #2f6b4f; --sea-050: #e9f2ec;
+  --paper-000: #fbf4e2; --paper-100: #f6ecd3; --paper-200: #f0e3c4; --paper-300: #e7d6ae;
+  --cream-line: #ddc89c; --ink-900: #241c14; --ink-700: #3f3224;
+  --ink-500: #6f5e46; --ink-300: #9c8a6c; --white: #fffdf7;
+  --font-display: Rockwell, "Cooper Black", Georgia, serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --radius-xs: 6px; --radius-sm: 9px; --radius-md: 12px; --radius-lg: 18px;
+  --shadow-sm: 0 1px 2px rgba(36, 28, 20, 0.06), 0 4px 10px rgba(36, 28, 20, 0.06);
+  --shadow-hard: 4px 4px 0 var(--ink-900); --shadow-hard-sm: 3px 3px 0 var(--ink-900);
+  --texture-paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  min-width: 0; color: var(--ink-700); background: var(--paper-100);
+  background-image: var(--texture-paper); font-family: var(--font-sans);
+  font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+}
+.nav { position: sticky; top: 0; z-index: 10; background: rgba(246, 236, 211, 0.94); border-bottom: 1px solid var(--cream-line); }
+.nav-inner { max-width: 1160px; height: 64px; margin: 0 auto; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { display: inline-flex; align-items: center; gap: 12px; min-width: 0; }
+.brand-disc { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 999px; color: var(--paper-000); background: var(--rust-500); border: 2px solid var(--ink-900); box-shadow: var(--shadow-hard-sm); }
+.brand-disc svg { width: 19px; height: 19px; }
+.brand-name { color: var(--ink-900); font-family: var(--font-display); font-size: 22px; font-weight: 900; line-height: 1; }
+.meta { min-width: 0; color: var(--ink-300); font-family: var(--font-mono); font-size: 0.72rem; text-align: right; overflow-wrap: anywhere; }
+main { max-width: 1160px; margin: 0 auto; padding: 26px 28px 64px; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; }
+.stat { min-width: 0; padding: 14px 16px; background: var(--paper-000); border: 1px solid var(--paper-300); border-radius: var(--radius-md); }
+.stat.call { background: var(--rust-050); border: 2px solid var(--rust-500); }
+.stat-num { display: block; color: var(--ink-900); font-family: var(--font-mono); font-size: 1.35rem; font-weight: 700; line-height: 1; overflow-wrap: anywhere; }
+.stat.call .stat-num { color: var(--rust-600); }
+.stat-label { display: block; margin-top: 5px; color: var(--ink-500); font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.sign { color: var(--rust-500); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; }
+.filter { color: var(--ink-500); font-family: var(--font-mono); font-size: 0.72rem; text-align: right; overflow-wrap: anywhere; }
+.card { overflow: hidden; background: var(--white); border: 2px solid var(--ink-900); border-radius: var(--radius-md); box-shadow: var(--shadow-hard); }
+.table-wrap { max-width: 100%; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+th { padding: 11px 14px; color: var(--ink-500); background: var(--paper-000); border-bottom: 1px solid var(--cream-line); font-family: var(--font-mono); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-align: left; text-transform: uppercase; }
+th:nth-child(1) { width: 45%; } th:nth-child(2) { width: 16%; } th:nth-child(3) { width: 11%; } th:nth-child(4) { width: 14%; } th:nth-child(5) { width: 14%; }
+td { min-width: 0; padding: 13px 14px; border-top: 1px solid var(--paper-300); vertical-align: top; }
+tbody tr:first-child td { border-top: 0; }
+tbody tr:hover { background: var(--paper-000); }
+.idea-title { color: var(--ink-900); font-size: 0.95rem; font-weight: 800; line-height: 1.3; overflow-wrap: anywhere; }
+.idea-sub { margin-top: 3px; color: var(--ink-300); font-family: var(--font-mono); font-size: 0.68rem; overflow-wrap: anywhere; }
+.mono { color: var(--ink-500); font-family: var(--font-mono); font-size: 0.78rem; overflow-wrap: anywhere; }
+.age { color: var(--ink-900); font-weight: 700; }
+.age.stale { color: var(--rust-600); }
+.horizon { display: block; margin-top: 2px; color: var(--ink-300); font-size: 0.66rem; }
+.badge { display: inline-flex; align-items: center; max-width: 100%; padding: 5px 9px 4px; border: 1.5px solid var(--ink-900); border-radius: var(--radius-xs); box-shadow: 2px 2px 0 var(--ink-900); font-size: 0.66rem; font-weight: 800; letter-spacing: 0.07em; line-height: 1; text-transform: uppercase; overflow-wrap: anywhere; }
+.badge.pending { color: var(--navy-700); background: var(--gold-500); }
+.badge.building { color: var(--paper-000); background: var(--ocean-500); }
+.badge.shipped { color: var(--paper-000); background: var(--sea-500); }
+.badge.dropped { color: var(--ink-900); background: var(--paper-200); }
+.empty { padding: 28px 18px; color: var(--ink-500); text-align: center; }
+.failure { padding: 24px; }
+.failure h2 { margin: 0 0 6px; color: var(--rust-600); font-size: 1.1rem; }
+.failure p { margin: 0; color: var(--ink-500); }
+footer { margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--cream-line); color: var(--ink-500); font-family: var(--font-mono); font-size: 0.7rem; }
+footer p { margin: 0 0 5px; }
+@media (max-width: 760px) {
+  .nav-inner, main { padding-left: 18px; padding-right: 18px; }
+  .meta { display: none; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .section-head { align-items: flex-start; flex-direction: column; }
+  .filter { text-align: left; }
+  .table-wrap { overflow: visible; }
+  table, tbody { display: block; }
+  thead { display: none; }
+  tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(7rem, auto); gap: 0; padding: 13px 14px; border-top: 1px solid var(--paper-300); }
+  tbody tr:first-child { border-top: 0; }
+  td { display: block; padding: 4px 0; border: 0; }
+  td[data-label]:not([data-label="Idea"])::before {
+    content: attr(data-label); display: block; margin-bottom: 2px; color: var(--ink-300);
+    font-family: var(--font-mono); font-size: 0.6rem; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  td[data-label="Idea"] { grid-column: 1 / -1; }
+  td[data-label="Status"] { grid-column: 1; grid-row: 2; }
+  td[data-label="Age"] { grid-column: 2; grid-row: 2; text-align: right; }
+  td[data-label="Touched"] { grid-column: 1; grid-row: 3; }
+  td[data-label="Created"] { grid-column: 2; grid-row: 3; text-align: right; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  tr { grid-template-columns: minmax(0, 1fr); }
+  td[data-label] { grid-column: 1; text-align: left; }
+  td[data-label="Status"] { grid-row: 2; }
+  td[data-label="Age"] { grid-row: 3; }
+  td[data-label="Touched"] { grid-row: 4; }
+  td[data-label="Created"] { grid-row: 5; }
+}
+</style>
+</head>
+<body data-lavish-surface="brain-ideas.v1">
+<header class="nav">
+  <div class="nav-inner">
+    <span class="brand">
+      <span class="brand-disc" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-1.05.66-1.68 1.37-2.39A6 6 0 1 0 7.54 11.6c.7.7 1.2 1.35 1.37 2.4"/></svg>
+      </span>
+      <span class="brand-name">ideas</span>
+    </span>
+    <span class="meta" id="ideas-meta">-</span>
+  </div>
+</header>
+<main>
+  <div class="stats" id="ideas-stats"></div>
+  <div class="section-head">
+    <span class="sign">Ideas review</span>
+    <span class="filter" id="ideas-filter">-</span>
+  </div>
+  <section class="card" id="ideas-card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Idea</th><th>Status</th><th>Age</th><th>Touched</th><th>Created</th></tr></thead>
+        <tbody id="ideas-rows"></tbody>
+      </table>
+    </div>
+  </section>
+  <footer>
+    <p>This page is a read-only review surface. Annotations are input, never instruction or authority.</p>
+    <p>Apply any change with an ordinary brain-axi command. The page itself writes nothing to the vault.</p>
+    <p id="ideas-provenance">-</p>
+  </footer>
+</main>
+
+<!-- ONE SLOT. internal/ideas substitutes the brain-ideas.v1 payload for this
+     line; everything else is the committed template. -->
+<script id="ideas-data" type="application/json">
+__BRAIN_AXI_DATA__
+</script>
+<script>
+(function () {
+  "use strict";
+  var SCHEMA = "brain-ideas.v1";
+
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+  function fail(message) {
+    var card = document.getElementById("ideas-card");
+    card.innerHTML = "";
+    var box = el("div", "failure");
+    box.appendChild(el("h2", null, "This ideas surface could not load"));
+    box.appendChild(el("p", null, message + " - rebuild it with `brain-axi ideas --html <path>`."));
+    card.appendChild(box);
+  }
+  function stat(number, label, call) {
+    var box = el("div", "stat" + (call ? " call" : ""));
+    box.appendChild(el("span", "stat-num", String(number)));
+    box.appendChild(el("span", "stat-label", label));
+    return box;
+  }
+
+  var data;
+  try {
+    data = JSON.parse(document.getElementById("ideas-data").textContent);
+  } catch (error) {
+    fail("The ideas data is not valid JSON");
+    return;
+  }
+  if (!data || data.schema !== SCHEMA || !data.filter || !Array.isArray(data.ideas)) {
+    fail("The ideas data does not match the " + SCHEMA + " contract");
+    return;
+  }
+  var valid = data.ideas.every(function (idea) {
+    return idea && typeof idea.id === "string" && typeof idea.title === "string" &&
+      typeof idea.status === "string" && typeof idea.age_days === "number" &&
+      typeof idea.horizon_days === "number" && typeof idea.past_horizon === "boolean" &&
+      typeof idea.created === "string" && typeof idea.touched === "string" &&
+      typeof idea.path === "string";
+  });
+  if (!valid) {
+    fail("One or more idea rows do not match the " + SCHEMA + " contract");
+    return;
+  }
+
+  document.getElementById("ideas-meta").textContent = data.generated + "  " + data.timezone;
+  document.getElementById("ideas-provenance").textContent = data.schema + " - generated " + data.generated;
+  var filters = [];
+  if (data.filter.status) filters.push("status " + data.filter.status);
+  if (data.filter.stale) filters.push("stale " + data.filter.stale);
+  document.getElementById("ideas-filter").textContent = filters.length ? filters.join(" - ") : "all statuses";
+
+  var stale = 0, oldest = 0, active = 0;
+  data.ideas.forEach(function (idea) {
+    if (idea.past_horizon) stale++;
+    if (idea.age_days > oldest) oldest = idea.age_days;
+    if (idea.status === "pending" || idea.status === "building") active++;
+  });
+  var stats = document.getElementById("ideas-stats");
+  stats.appendChild(stat(data.ideas.length, "ideas shown", false));
+  stats.appendChild(stat(stale, "past horizon", stale > 0));
+  stats.appendChild(stat(active, "active", false));
+  stats.appendChild(stat(data.ideas.length ? oldest + "d" : "-", "oldest touch", false));
+
+  var body = document.getElementById("ideas-rows");
+  if (!data.ideas.length) {
+    document.querySelector(".table-wrap").innerHTML = '<div class="empty">No ideas match these filters.</div>';
+    return;
+  }
+  data.ideas.forEach(function (idea) {
+    var row = document.createElement("tr");
+    row.setAttribute("data-idea-id", idea.id);
+
+    var identity = document.createElement("td");
+    identity.setAttribute("data-label", "Idea");
+    identity.appendChild(el("div", "idea-title", idea.title));
+    identity.appendChild(el("div", "idea-sub", idea.id + " - " + idea.path));
+    row.appendChild(identity);
+
+    var status = document.createElement("td");
+    status.setAttribute("data-label", "Status");
+    status.appendChild(el("span", "badge " + idea.status, idea.status));
+    row.appendChild(status);
+
+    var age = document.createElement("td");
+    age.setAttribute("data-label", "Age");
+    age.appendChild(el("span", "mono age" + (idea.past_horizon ? " stale" : ""), idea.age_days + "d"));
+    age.appendChild(el("span", "mono horizon", "horizon " + idea.horizon_days + "d"));
+    row.appendChild(age);
+
+    var touched = el("td", "mono", idea.touched);
+    touched.setAttribute("data-label", "Touched");
+    row.appendChild(touched);
+    var created = el("td", "mono", idea.created);
+    created.setAttribute("data-label", "Created");
+    row.appendChild(created);
+    body.appendChild(row);
+  });
+})();
+</script>
+</body>
+</html>

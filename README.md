@@ -256,6 +256,20 @@ ideas[3]{id,title,status,age,touched}:
 attention[1]: customer-referral past its 14d nudge horizon
 ```
 
+The same query can become a first-class visual review surface for Lavish without changing the
+plain-text or JSON result:
+
+```sh
+brain-axi ideas --status pending --stale 14d --html .lavish/ideas.html
+npx -y lavish-axi .lavish/ideas.html
+```
+
+`--html` preserves the requested `--status` and `--stale` filters and writes a self-contained
+`brain-ideas.v1` page with title, status, age, touched date, created date and vault path for every
+matching idea. The second command is an explicit external viewer invocation. `brain-axi` itself
+opens no socket, starts no server and calls no model. Re-running the first command replaces the same
+file atomically, so an active Lavish review keeps a stable path.
+
 **"What am I waiting on?"** - commitments to follow up, most urgent first. A brain task is something
 you have to remember to *check*; it never becomes a dispatched work item, and this tool never writes
 to any backlog.

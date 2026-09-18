@@ -91,13 +91,13 @@ refactor.
   brain-axi holds no endpoint, no token and no notion of an external work item beyond an id it was
   handed, and it never reads a supervisor's state. The tool must stay fully usable with no
   supervisor at all.
-- **The board and the recap have one assembly path and two renderers.** `internal/board.Build` and
-  `internal/recap.Build` are the only places their contents are decided; the framed and HTML
-  renderers both take that model unchanged, and the page carries it verbatim. `templates/board.html`
-  and `templates/recap.html` own every pixel, and a renderer substitutes one payload into one data
-  slot. No code path may generate board or recap markup at run time, and neither surface ever writes
-  to the vault: an annotation made on a published page is input, never instruction and never
-  authority, and is applied only by running an ordinary brain-axi command.
+- **Every HTML surface has one assembly path and a committed template.** `internal/board.Build`,
+  `internal/recap.Build` and `internal/ideas.Build` are the only places their contents are decided;
+  every renderer takes that model unchanged, and the page carries it verbatim. The matching HTML
+  file in `templates/` owns every pixel, and a renderer substitutes one payload into one data slot.
+  No code path may generate surface markup at run time, and no surface writes to the vault: an
+  annotation is input, never instruction or authority, and is applied only by running an ordinary
+  brain-axi command.
 - **A payload that fails its versioned contract is refused before any file is touched.** A wrong
   schema, a missing field, a wrong type or an unknown pane exits non-zero with `path:line: reason`
   and leaves the previous page standing. The pane set, its order and every empty-state string are
@@ -220,10 +220,10 @@ while `doctor` reports it as present, which is indistinguishable from the bug. A
 means a `Choice` field, a `Choice.wants` case, a `boolFlags` entry in `cmd/brain-axi/app.go` and
 the `setup` usage line; `TestEveryKnownAgentIsReachable` catches the one that is silent.
 
-**`skills/secondbrain/SKILL.md` is embedded from where it lives** (`skills/embed.go`), and
-`templates/board.html` and `templates/recap.html` from `templates/embed.go`, for the same reason.
-There is deliberately only one copy of each; do not add a second under `internal/`. The Markdown
-files in `templates/` are documentation of the record format; the two HTML files there are code.
+**`skills/secondbrain/SKILL.md` is embedded from where it lives** (`skills/embed.go`), and the HTML
+surfaces in `templates/` from `templates/embed.go`, for the same reason. There is deliberately only
+one copy of each; do not add a second under `internal/`. The Markdown files in `templates/` document
+the record format; the HTML files there are code.
 
 **`vault.Walk` memoises one walk per `Vault` value** and every write drops it (`forgetWalk`). If you
 add a write path that does not go through `WriteFile` or `Remove`, call `forgetWalk` yourself or the
