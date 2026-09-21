@@ -1,0 +1,46 @@
+name: Bug report
+description: Report a reproducible problem with brain-axi.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include vault contents, credentials, tokens, or private forge URLs.
+        For a suspected vulnerability, follow SECURITY.md instead.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `brain-axi --version`.
+      placeholder: brain-axi v0.1.0
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: Operating system and architecture.
+      placeholder: Linux amd64
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Include the command, a minimal fixture, and the observed output.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Add relevant logs or links that do not expose private data.

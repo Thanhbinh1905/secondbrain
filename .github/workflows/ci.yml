@@ -18,7 +18,8 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          # The single source of truth for the Go version is go.mod.
+          # go.mod declares the minimum supported toolchain, currently Go 1.22.
+          # Keeping this tied to the module makes local and CI minimums agree.
           go-version-file: go.mod
           cache: true
 
@@ -37,7 +38,18 @@ jobs:
       - name: go build
         run: go build ./...
 
-      - name: go test
+      - name: staticcheck
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.8.0
+          args: --enable-only=staticcheck --tests=false
+
+      - name: go test with race detector
+        # The latency suite is intentionally skipped here: the race detector
+        # changes timing, while the ordinary test below keeps the NFR-1 guard.
+        run: go test -race -short ./...
+
+      - name: go test with coverage
         # NFR-1's 100 ms budget describes a developer's own host. A shared
         # two-core runner has been observed parsing the same 5,000-file vault
         # in up to ~470 ms for `search`, and that varies with runner load, not
@@ -47,4 +59,14 @@ jobs:
         # every real measurement, so an order-of-magnitude regression fails.
         env:
           BRAIN_AXI_LATENCY_BUDGET: 800ms
-        run: go test ./...
+        run: go test -coverprofile=coverage.out ./...
+
+      - name: coverage guard
+        run: |
+          total="$(go tool cover -func=coverage.out | awk '$1 == "total:" { print $3 }' | tr -d '%')"
+          awk -v total="$total" 'BEGIN {
+            if (total == "" || total < 75.0) {
+              printf "total test coverage is %s%%; want at least 75%%\\n", total
+              exit 1
+            }
+          }'
