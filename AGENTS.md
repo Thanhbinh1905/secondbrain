@@ -37,8 +37,10 @@ with the code. `$BRAIN_AXI_LATENCY_BUDGET` overrides the budget (default `100ms`
 catching an order-of-magnitude regression. The tests always run and always log the real measurement.
 Raise the CI value only with a measurement behind it, and never remove the assertion.
 
-CI is `.github/workflows/ci.yml`: gofmt, `go vet`, `go build`, `go test ./...` on pull requests and
-pushes to `main`, with the Go version taken from `go.mod` and the action versions pinned.
+CI is `.github/workflows/ci.yml`: gofmt, `go vet`, staticcheck, `go build`, `go test ./...`,
+`go test -race -short ./...`, and a 75% total coverage guard on pull requests and pushes to
+`main`. The minimum Go version is 1.22 from `go.mod`, and the action and linter versions are
+pinned. Release and support boundaries are recorded in [docs/release.md](docs/release.md).
 
 ## Constraints that are not negotiable
 
